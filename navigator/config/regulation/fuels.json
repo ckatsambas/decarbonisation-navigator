@@ -1,0 +1,270 @@
+{
+  "name": "fuels",
+  "title": {
+    "el": "Καύσιμα: προεπιλεγμένοι συντελεστές",
+    "en": "Fuels: default factors"
+  },
+  "sources": {
+    "ec_method": {
+      "title": "European Commission (ESSF SAPS WS1), FuelEU Maritime calculation methodologies, incl. Annex II default factors of Regulation (EU) 2023/1805",
+      "url": "https://transport.ec.europa.eu/document/download/7b55d8dd-ce19-4e94-9091-fb710570b7f7_en?filename=ESSF_SAPS_WS1-FuelEU_calculation_methodologies.pdf",
+      "checked": "2026-10-24"
+    }
+  },
+  "values": {
+    "hfo": {
+      "value": {
+        "name": {
+          "el": "Βαρύ μαζούτ (HFO)",
+          "en": "Heavy fuel oil (HFO)"
+        },
+        "lcv": 0.0405,
+        "wtt": 13.5,
+        "cf_co2": 3.114,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "lfo": {
+      "value": {
+        "name": {
+          "el": "Ελαφρύ μαζούτ / VLSFO (LFO)",
+          "en": "Light fuel oil / VLSFO (LFO)"
+        },
+        "lcv": 0.041,
+        "wtt": 13.2,
+        "cf_co2": 3.151,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "mgo": {
+      "value": {
+        "name": {
+          "el": "Ναυτιλιακό πετρέλαιο (MDO/MGO)",
+          "en": "Marine diesel/gas oil (MDO/MGO)"
+        },
+        "lcv": 0.0427,
+        "wtt": 14.4,
+        "cf_co2": 3.206,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "lng_otto_ms": {
+      "value": {
+        "name": {
+          "el": "LNG, Otto μεσαίων στροφών",
+          "en": "LNG, Otto medium speed"
+        },
+        "lcv": 0.0491,
+        "wtt": 18.5,
+        "cf_co2": 2.75,
+        "cf_ch4": 0.0,
+        "cf_n2o": 0.00011,
+        "slip": 3.1,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "lng_otto_ss": {
+      "value": {
+        "name": {
+          "el": "LNG, Otto αργόστροφη",
+          "en": "LNG, Otto slow speed"
+        },
+        "lcv": 0.0491,
+        "wtt": 18.5,
+        "cf_co2": 2.75,
+        "cf_ch4": 0.0,
+        "cf_n2o": 0.00011,
+        "slip": 1.7,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "lng_diesel_ss": {
+      "value": {
+        "name": {
+          "el": "LNG, Diesel αργόστροφη",
+          "en": "LNG, Diesel slow speed"
+        },
+        "lcv": 0.0491,
+        "wtt": 18.5,
+        "cf_co2": 2.75,
+        "cf_ch4": 0.0,
+        "cf_n2o": 0.00011,
+        "slip": 0.2,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "lng_lbsi": {
+      "value": {
+        "name": {
+          "el": "LNG, LBSI",
+          "en": "LNG, LBSI"
+        },
+        "lcv": 0.0491,
+        "wtt": 18.5,
+        "cf_co2": 2.75,
+        "cf_ch4": 0.0,
+        "cf_n2o": 0.00011,
+        "slip": 2.6,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "methanol": {
+      "value": {
+        "name": {
+          "el": "Μεθανόλη (φυσικό αέριο)",
+          "en": "Methanol (natural gas)"
+        },
+        "lcv": 0.0199,
+        "wtt": 31.3,
+        "cf_co2": 1.375,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "fossil"
+      },
+      "source": "ec_method"
+    },
+    "hvo": {
+      "value": {
+        "name": {
+          "el": "HVO (χρησιμοποιημένα έλαια)",
+          "en": "HVO (waste cooking oil)"
+        },
+        "lcv": 0.044,
+        "wtt": -54.79545,
+        "cf_co2": 3.115,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "bio"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    },
+    "fame": {
+      "value": {
+        "name": {
+          "el": "Βιοντίζελ FAME (χρησιμοποιημένα έλαια)",
+          "en": "Biodiesel FAME (waste cooking oil)"
+        },
+        "lcv": 0.037,
+        "wtt": -61.69459,
+        "cf_co2": 2.834,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "bio"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    },
+    "bio_methanol": {
+      "value": {
+        "name": {
+          "el": "Βιομεθανόλη",
+          "en": "Bio-methanol"
+        },
+        "lcv": 0.02,
+        "wtt": -58.35,
+        "cf_co2": 1.375,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "bio"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    },
+    "bio_lng_otto_ms": {
+      "value": {
+        "name": {
+          "el": "Υγροποιημένο βιομεθάνιο, Otto μεσαίων",
+          "en": "Liquefied biomethane, Otto medium speed"
+        },
+        "lcv": 0.05,
+        "wtt": -35.83,
+        "cf_co2": 2.75,
+        "cf_ch4": 0.0,
+        "cf_n2o": 0.00011,
+        "slip": 3.1,
+        "kind": "bio"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    },
+    "e_methanol": {
+      "value": {
+        "name": {
+          "el": "e-μεθανόλη (RFNBO)",
+          "en": "e-methanol (RFNBO)"
+        },
+        "lcv": 0.0199,
+        "wtt": -58.9,
+        "cf_co2": 1.375,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "rfnbo"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    },
+    "e_diesel": {
+      "value": {
+        "name": {
+          "el": "e-diesel (RFNBO)",
+          "en": "e-diesel (RFNBO)"
+        },
+        "lcv": 0.0427,
+        "wtt": -63.2,
+        "cf_co2": 3.206,
+        "cf_ch4": 5e-05,
+        "cf_n2o": 0.00018,
+        "slip": 0.0,
+        "kind": "rfnbo"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    },
+    "e_ammonia": {
+      "value": {
+        "name": {
+          "el": "e-αμμωνία (RFNBO)",
+          "en": "e-ammonia (RFNBO)"
+        },
+        "lcv": 0.0186,
+        "wtt": 10.0,
+        "cf_co2": 0.0,
+        "cf_ch4": 0.0,
+        "cf_n2o": 0.0,
+        "slip": 0.0,
+        "kind": "rfnbo"
+      },
+      "source": "ec_method",
+      "status": "verify",
+      "note": "Illustrative pathway value from the Commission's methodology; actual values come from the fuel's proof of sustainability/compliance."
+    }
+  }
+}

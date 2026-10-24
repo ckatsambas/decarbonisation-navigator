@@ -11,6 +11,7 @@ from ..data import mrv
 class AppState(QObject):
     db_changed = Signal()
     ship_changed = Signal(object)          # mrv.ShipYear | None
+    view_changed = Signal(str)             # "eu" | "ww"
 
     def __init__(self, db_path: Path | None = None, bundle: Path | None | bool = None):
         """`bundle`: the packaged EU MRV database (default), another .xz file, or False for none."""
@@ -18,6 +19,7 @@ class AppState(QObject):
         self.db_path = Path(db_path) if db_path else mrv.default_db_path()
         self.db: mrv.MrvDatabase | None = None
         self.ship_year: mrv.ShipYear | None = None
+        self.view = "eu"
         self.bundle_status = "no-bundle"
         if bundle is not False:
             try:
@@ -38,3 +40,8 @@ class AppState(QObject):
     def use_ship(self, ship_year: mrv.ShipYear | None) -> None:
         self.ship_year = ship_year
         self.ship_changed.emit(ship_year)
+
+    def set_view(self, view: str) -> None:
+        if view in ("eu", "ww") and view != self.view:
+            self.view = view
+            self.view_changed.emit(view)

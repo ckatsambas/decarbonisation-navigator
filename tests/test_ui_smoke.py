@@ -11,6 +11,8 @@ from navigator.ui.state import AppState
 
 
 def _make(qtbot, path):
+    from PySide6.QtCore import QSettings
+    QSettings().setValue("view", "eu")
     w = MainWindow(AppState(path, bundle=False))
     qtbot.addWidget(w)
     return w
@@ -38,13 +40,32 @@ def test_window_language_and_theme(win):
     assert theme.current().name == "light"
 
 
-def test_ets_page_reacts_to_input(win):
+def ets_total(reg):
+    reg.recompute()
+    return sum(r.ets.cost for r in reg.results)
+
+
+def test_regulation_page_reacts_to_input(win):
     reg = page(win, RegulationPage)
-    before = sum(r.cost for r in reg.ets.path)
-    reg.ets.scope["in_port"].setValue(reg.ets.scope["in_port"].value() + 1000)
-    assert sum(r.cost for r in reg.ets.path) > before
-    reg.ets.gt.setValue(1000)                     # below 5000 GT: out of scope
-    assert sum(r.cost for r in reg.ets.path) == 0
+    before = ets_total(reg)
+    reg.inputs.scope["in_port"].setValue(reg.inputs.scope["in_port"].value() + 1000)
+    assert ets_total(reg) > before
+    reg.inputs.gt.setValue(1000)                  # below 5000 GT: out of scope
+    assert ets_total(reg) == 0
+
+
+def test_view_switch_changes_only_imo_costs(win):
+    reg = page(win, RegulationPage)
+    reg.recompute()
+    eu = {r.year: r for r in reg.results}
+    assert reg.inputs.ww.isHidden()
+    win.state.set_view("ww")
+    ww = {r.year: r for r in reg.results}
+    assert not reg.inputs.ww.isHidden()
+    assert win.view_switch.buttons["ww"].isChecked()
+    assert ww[2030].ets.cost == eu[2030].ets.cost
+    assert ww[2030].nzf.cost_eur > eu[2030].nzf.cost_eur
+    win.state.set_view("eu")
 
 
 def test_search_and_use_ship(win):
@@ -56,10 +77,11 @@ def test_search_and_use_ship(win):
     assert ship.detail.history[-1].year == 2025
     ship.detail.use_btn.click()
     reg = page(win, RegulationPage)
-    assert reg.ets.loaded is not None and reg.ets.scope["intra_eu"].value() == 4000
-    assert reg.ets.ice.currentData() == "IA" and reg.ets.scope_override is True
-    reg.ets.reset_example()
-    assert reg.ets.loaded is None
+    assert reg.inputs.loaded is not None and reg.inputs.scope["intra_eu"].value() == 4000
+    assert reg.inputs.ice.currentData() == "IA" and reg.inputs.scope_override is True
+    assert reg.inputs.cii_type.currentData() == "ropax" and reg.inputs.share_estimate is not None
+    reg.inputs.reset_example()
+    assert reg.inputs.loaded is None
 
 
 def test_empty_database_shows_import_hint(qtbot, tmp_path):

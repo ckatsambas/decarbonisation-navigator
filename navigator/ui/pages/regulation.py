@@ -1,12 +1,17 @@
-"""Carbon regulations page: EU ETS calculator, placeholders for FuelEU and the IMO NZF,
-and the full list of parameters with their sources."""
+"""Carbon regulations page: one set of ship inputs, results for every regime.
+
+Left: ship, emissions, fuel, activity outside the EU (worldwide view only) and scenario.
+Right: key figures and tabs (overview, EU ETS, FuelEU, IMO NZF, CII, parameters).
+"""
 from __future__ import annotations
 
 import json
+import math
 
-from PySide6.QtCore import QLocale, Qt
+from PySide6.QtCore import QLocale, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
@@ -21,21 +26,26 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...engine import fuels as F
 from ...engine import params as P
+from ...engine.compliance import YEARS, Profile, Rules, Scenario, YearResult, evaluate
+from ...engine.estimate import EuShare, user_share
 from ...engine.models import AnnualEmissions, ScopeSplit, Ship, ShipCategory, YearSeries
-from ...engine.regulation.eu_ets import EtsRules, cost_path, total_cost
-from ...i18n import eur_short, language, num, pct, tr
+from ...engine.regulation.cii import MRV_TO_CII
+from ...engine.regulation.imo_nzf import SCENARIOS
+from ...i18n import eur_short, language, num, pct, pick, tr
 from .. import theme
-from ..charts import BarChart
-from ..widgets import Kpi, Panel, TrLabel, amp
+from ..charts import BarChart, StackedBarChart
+from ..widgets import Kpi, Panel, ReadMore, TrLabel, amp
 from .base import Page
 
-YEARS = range(2024, 2051)
-SCOPES = ("intra_eu", "in_port", "from_eu", "to_eu", "outside")
+EU_SCOPES = ("intra_eu", "in_port", "from_eu", "to_eu")
+CII_TYPES = sorted(set(MRV_TO_CII.values()))
 
 # Illustrative Kamsarmax trading partly with the EU (not a real ship)
-DEFAULTS = {"gt": 44_000, "intra_eu": 0, "in_port": 1_000, "from_eu": 4_000, "to_eu": 3_000,
-            "outside": 11_000, "ch4": 0.4, "n2o": 1.0, "p2025": 75, "p2030": 110, "p2050": 150}
+DEFAULTS = {"gt": 44_000, "intra_eu": 0, "in_port": 1_000, "from_eu": 4_000, "to_eu": 3_000, "ch4": 0.4,
+            "n2o": 1.0, "eu_share": 42, "capacity": 82_000, "distance": 60_000, "cii_type": "bulk",
+            "fuel1": "hfo", "share1": 100, "fuel2": None, "p2025": 75, "p2030": 110, "p2050": 150}
 
 
 def ui_locale() -> QLocale:
@@ -59,35 +69,70 @@ def spin(value: float, maximum: float = 1e7, decimals: int = 0, step: float = 10
 
 
 class TrCombo(QComboBox):
-    """Combo whose item texts are translation keys and whose data are engine values."""
+    """Combo whose item texts are translation keys (or callables) and whose data are engine values."""
 
-    def __init__(self, items: list[tuple[str, object]]):
+    def __init__(self, items: list[tuple[object, object]]):
         super().__init__()
-        self.items = items
-        for key, data in items:
-            self.addItem(tr(key), data)
+        self.items = list(items)
+        for key, data in self.items:
+            self.addItem(self._text(key), data)
+
+    @staticmethod
+    def _text(key) -> str:
+        return key() if callable(key) else tr(key)
 
     def retranslate(self) -> None:
         for i, (key, _) in enumerate(self.items):
-            self.setItemText(i, tr(key))
+            self.setItemText(i, self._text(key))
+
+    def select(self, data) -> None:
+        i = self.findData(data)
+        self.setCurrentIndex(max(i, 0))
 
 
-class EtsCalculator(QWidget):
-    def __init__(self, state=None):
+def fill_table(table: QTableWidget, header_keys: list[str], rows: list[list[str]], colors: dict | None = None) -> None:
+    table.setColumnCount(len(header_keys))
+    table.setHorizontalHeaderLabels([tr(k) for k in header_keys])
+    table.setRowCount(len(rows))
+    for i, row in enumerate(rows):
+        for j, text in enumerate(row):
+            it = QTableWidgetItem(text)
+            it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            if colors and (i, j) in colors:
+                it.setForeground(colors[(i, j)])
+            table.setItem(i, j, it)
+
+
+def new_table(min_height: int = 320) -> QTableWidget:
+    t = QTableWidget(0, 1)
+    t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+    t.setAlternatingRowColors(True)
+    t.verticalHeader().setVisible(False)
+    hh = t.horizontalHeader()
+    hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+    hh.setStretchLastSection(True)
+    t.setMinimumHeight(min_height)
+    return t
+
+
+# =============================================================================== inputs
+class Inputs(QWidget):
+    changed = Signal()
+
+    def __init__(self, state, rules: Rules):
         super().__init__()
-        self.rules = EtsRules.load()
-        self.loaded = None                 # mrv.ShipYear the inputs came from, if any
-        self.loaded_em: AnnualEmissions | None = None   # its exact per-gas split, until the user edits
+        self.state, self.rules = state, rules
+        self.loaded = None                          # mrv.ShipYear the inputs came from
+        self.loaded_em: AnnualEmissions | None = None
         self.scope_override: bool | None = None
         self.coverage_ratio: float | None = None
+        self.share_estimate: EuShare | None = None
         self._filling = False
-        grid = QHBoxLayout(self)
-        grid.setContentsMargins(0, 8, 0, 0)
-        grid.setSpacing(16)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(12)
 
-        # ---------------------------------------------------------------- inputs
-        left = QVBoxLayout()
-        left.setSpacing(12)
+        # source banner
         self.source = Panel()
         self.source_text = TrLabel("ets.from_mrv", "Muted", wrap=True, name="", imo="", year="")
         self.source.body.addWidget(self.source_text)
@@ -98,168 +143,146 @@ class EtsCalculator(QWidget):
         self.reset_btn.clicked.connect(self.reset_example)
         self.source.body.addWidget(self.reset_btn, 0, Qt.AlignmentFlag.AlignLeft)
         self.source.hide()
-        left.addWidget(self.source)
+        v.addWidget(self.source)
 
-        ship = Panel("ets.panel.ship")
+        # ship
+        ship = Panel("in.panel.ship")
         f = self._form(ship)
         self.gt = spin(DEFAULTS["gt"], 600_000, step=1000)
         self.category = TrCombo([("cat.cargo", ShipCategory.CARGO), ("cat.passenger", ShipCategory.PASSENGER),
                                  ("cat.offshore", ShipCategory.OFFSHORE), ("cat.other", ShipCategory.OTHER)])
         self.ice = TrCombo([("ice.none", None), ("IA", "IA"), ("IA Super", "IA Super")])
+        self.cii_type = TrCombo([("in.fuel.none", None)] + [(f"cii.type.{t}", t) for t in CII_TYPES])
+        self.capacity = spin(DEFAULTS["capacity"], 600_000, step=1000)
+        self.capacity_label = TrLabel("in.capacity.dwt", "Muted", wrap=True)
+        self.distance = spin(DEFAULTS["distance"], 1_000_000, step=1000)
+        self.domestic = QCheckBox()
         self._row(f, "ets.gt", self.gt)
         self._row(f, "ets.category", self.category)
         self._row(f, "ets.ice", self.ice)
-        left.addWidget(ship)
+        self._row(f, "in.cii_type", self.cii_type)
+        f.addRow(self.capacity_label, self.capacity)
+        self._row(f, "in.distance", self.distance)
+        ship.body.addWidget(self.domestic)
+        ship.body.addWidget(ReadMore("in.domestic.more"))
+        v.addWidget(ship)
 
+        # emissions
         em = Panel("ets.panel.emissions")
         f = self._form(em)
-        self.scope = {}
-        for k in SCOPES:
-            self.scope[k] = spin(DEFAULTS[k])
-            self._row(f, f"scope.{k}", self.scope[k])
-        left.addWidget(em)
-
-        gases = Panel("ets.panel.other_gases")
-        f = self._form(gases)
+        self.scope = {k: spin(DEFAULTS[k]) for k in EU_SCOPES}
+        for k, s in self.scope.items():
+            self._row(f, f"scope.{k}", s)
         self.ch4 = spin(DEFAULTS["ch4"], 10_000, decimals=2, step=0.1)
         self.n2o = spin(DEFAULTS["n2o"], 10_000, decimals=2, step=0.1)
         self._row(f, "ets.ch4", self.ch4)
         self._row(f, "ets.n2o", self.n2o)
-        gases.body.addWidget(TrLabel("ets.gases_hint", "Faint", wrap=True))
-        left.addWidget(gases)
+        em.body.addWidget(TrLabel("ets.gases_hint", "Faint", wrap=True))
+        v.addWidget(em)
 
-        price = Panel("ets.panel.price")
-        f = self._form(price)
+        # fuel
+        fuel = Panel("in.panel.fuel")
+        f = self._form(fuel)
+        names = [(lambda k=k: pick(rules.fuels[k].name), k) for k in rules.fuels]
+        self.fuel1 = TrCombo(names)
+        self.fuel2 = TrCombo([("in.fuel.none", None)] + names)
+        self.share1 = spin(DEFAULTS["share1"], 100, decimals=0, step=5)
+        self._row(f, "in.fuel1", self.fuel1)
+        self._row(f, "in.share1", self.share1)
+        self._row(f, "in.fuel2", self.fuel2)
+        self.fuel_more = ReadMore("in.fuel.more.oil", cf="")
+        self.fuel_more.hide()
+        fuel.body.addWidget(self.fuel_more)
+        v.addWidget(fuel)
+
+        # worldwide
+        self.ww = Panel("in.panel.ww")
+        f = self._form(self.ww)
+        self.eu_share = spin(DEFAULTS["eu_share"], 100, decimals=0, step=5)
+        self.eu_share.setMinimum(1)
+        self._row(f, "in.eu_share", self.eu_share)
+        self.ww_method = TrLabel("ww.method.user", "Estimate", wrap=True)
+        self.ww.body.addWidget(self.ww_method)
+        self.ww_more = ReadMore("ww.more", hours="", days="", share="", low="", high="")
+        self.ww.body.addWidget(self.ww_more)
+        v.addWidget(self.ww)
+
+        # scenario
+        sc = Panel("in.panel.scenario")
+        f = self._form(sc)
         self.prices = {y: spin(DEFAULTS[f"p{y}"], 2_000, step=5) for y in (2025, 2030, 2050)}
         for y, s in self.prices.items():
-            f.addRow(str(y), s)
-        price.body.addWidget(TrLabel("ets.price_hint", "Faint", wrap=True))
-        left.addWidget(price)
-        left.addStretch(1)
+            f.addRow(f"EUA {y} (€/t)", s)
+        self.nzf = TrCombo([(f"nzf.{s}", s) for s in SCENARIOS])
+        self._row(f, "in.nzf", self.nzf)
+        sc.body.addWidget(TrLabel("ets.price_hint", "Faint", wrap=True))
+        sc.body.addWidget(ReadMore("in.nzf.more"))
+        v.addWidget(sc)
+        v.addStretch(1)
 
-        lw = QWidget()
-        lw.setLayout(left)
-        lw.setFixedWidth(400)
-        grid.addWidget(lw, 0, Qt.AlignmentFlag.AlignTop)
-
-        # ---------------------------------------------------------------- results
-        right = QVBoxLayout()
-        right.setSpacing(12)
-        kp = Panel()
-        kg = QGridLayout()
-        kg.setHorizontalSpacing(28)
-        self.k_cov = Kpi("ets.kpi.covered")
-        self.k_share = Kpi("ets.kpi.share")
-        self.k_year = Kpi("ets.kpi.year", year=2026)
-        self.k_total = Kpi("ets.kpi.total", a=YEARS[0], b=YEARS[-1])
-        for i, k in enumerate((self.k_cov, self.k_share, self.k_year, self.k_total)):
-            kg.addWidget(k, 0, i)
-            kg.setColumnStretch(i, 1)
-        kp.body.addLayout(kg)
-        self.scope_warn = TrLabel("ets.out_of_scope", "Warning", wrap=True)
-        kp.body.addWidget(self.scope_warn)
-        right.addWidget(kp)
-
-        cp = Panel("ets.chart.title")
-        self.chart = BarChart()
-        cp.body.addWidget(self.chart)
-        right.addWidget(cp)
-
-        tp = Panel()
-        self.table = QTableWidget(0, 6)
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.table.setAlternatingRowColors(True)
-        self.table.verticalHeader().setVisible(False)
-        hh = self.table.horizontalHeader()
-        hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        hh.setStretchLastSection(True)
-        self.table.setMinimumHeight(320)
-        tp.body.addWidget(self.table)
-        right.addWidget(tp)
-        grid.addLayout(right, 1)
-
+        self.fuel1.select(DEFAULTS["fuel1"])
+        self.cii_type.select(DEFAULTS["cii_type"])
+        self._timer = QTimer(self, singleShot=True, interval=60)
+        self._timer.timeout.connect(self.changed.emit)
         for s in [self.ch4, self.n2o, *self.scope.values()]:
             s.valueChanged.connect(self._emissions_edited)
-        for s in self.prices.values():
-            s.valueChanged.connect(self.recompute)
+        for s in [self.capacity, self.distance, self.share1, *self.prices.values()]:
+            s.valueChanged.connect(self._poke)
+        self.eu_share.valueChanged.connect(self._share_edited)
         self.gt.valueChanged.connect(self._ship_edited)
         self.category.currentIndexChanged.connect(self._ship_edited)
-        self.ice.currentIndexChanged.connect(self.recompute)
-        if state is not None:
-            state.ship_changed.connect(self.load_ship)
-        self.reset_btn.setText(tr("ets.reset"))
-        self.recompute()
-
-    # ------------------------------------------------------------------ inputs from EU MRV
-    def _emissions_edited(self) -> None:
-        if not self._filling:
-            self.loaded_em = None          # user changed figures: fall back to the proportional split
-            self.coverage_ratio = None     # the observed ratio belonged to the reported figures
-            self.ratio_text.hide()
-        self.recompute()
-
-    def _ship_edited(self) -> None:
-        if not self._filling:
-            self.scope_override = None     # user changed category/tonnage: apply the rules
-        self.recompute()
-
-    def _fill(self, values: dict, category, ice) -> None:
-        self._filling = True
-        try:
-            self.gt.setValue(values["gt"])
-            for k in SCOPES:
-                self.scope[k].setValue(values[k])
-            self.ch4.setValue(values["ch4"])
-            self.n2o.setValue(values["n2o"])
-            self.category.setCurrentIndex(max(0, self.category.findData(category)))
-            if ice and self.ice.findData(ice) < 0:
-                self.ice.items.append((ice, ice))
-                self.ice.addItem(ice, ice)
-            self.ice.setCurrentIndex(max(0, self.ice.findData(ice)))
-        finally:
-            self._filling = False
-
-    def load_ship(self, ship_year) -> None:
-        if ship_year is None:
-            return
-        em = ship_year.emissions()
-        ship = ship_year.to_ship()
-        vals = {"gt": ship.gross_tonnage, "ch4": em.ch4.total, "n2o": em.n2o.total}
-        vals.update({k: getattr(em.co2, k) for k in SCOPES})
-        self._fill(vals, ship.category, ship.ice_class)
-        self.loaded, self.loaded_em, self.scope_override = ship_year, em, ship.ets_scope_override
-        self.coverage_ratio = ship.ets_coverage_ratio
-        self.source_text.set_key("ets.from_mrv", name=ship.name, imo=ship.imo, year=ship_year.year)
-        if self.coverage_ratio is not None:
-            self.ratio_text.set_key("ets.ratio", pct=pct(min(max(self.coverage_ratio, 0), 1), 1),
-                                    until=self.rules.derogations_until)
-        self.ratio_text.setVisible(self.coverage_ratio is not None)
-        self.source.show()
-        self.recompute()
-
-    def reset_example(self) -> None:
-        self._fill(DEFAULTS, ShipCategory.CARGO, None)
-        self.loaded = self.loaded_em = self.scope_override = self.coverage_ratio = None
-        self.source.hide()
-        self.recompute()
+        for c in (self.ice, self.nzf, self.fuel1, self.fuel2):
+            c.currentIndexChanged.connect(self._poke)
+        self.cii_type.currentIndexChanged.connect(self._cii_type_changed)
+        self.domestic.toggled.connect(self._poke)
+        self.retranslate()
+        self._cii_type_changed()
 
     # ------------------------------------------------------------------ helpers
     def _form(self, panel: Panel) -> QFormLayout:
         f = QFormLayout()
         f.setHorizontalSpacing(14)
         f.setVerticalSpacing(8)
-        f.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
         panel.body.addLayout(f)
         return f
 
     def _row(self, f: QFormLayout, key: str, w: QWidget) -> None:
-        lab = TrLabel(key, "Muted", wrap=True)
-        f.addRow(lab, w)
+        f.addRow(TrLabel(key, "Muted", wrap=True), w)
 
+    def _poke(self) -> None:
+        if not self._filling:
+            self._timer.start()
+
+    def _emissions_edited(self) -> None:
+        if not self._filling:
+            self.loaded_em = None              # back to the proportional split of the entered figures
+            self.coverage_ratio = None
+            self.ratio_text.hide()
+        self._poke()
+
+    def _ship_edited(self) -> None:
+        if not self._filling:
+            self.scope_override = None
+        self._poke()
+
+    def _share_edited(self) -> None:
+        if not self._filling:
+            self.share_estimate = None         # the user's own value (method a)
+            self._show_share_method()
+        self._poke()
+
+    def _cii_type_changed(self) -> None:
+        t = self.cii_type.currentData()
+        unit = self.rules.cii.capacity_unit(t) if t else "dwt"
+        self.capacity_label.set_key(f"in.capacity.{unit}")
+        self._poke()
+
+    # ------------------------------------------------------------------ build engine inputs
     def ship(self) -> Ship:
-        return Ship(imo="", name="", ship_type="", category=self.category.currentData(),
-                    gross_tonnage=self.gt.value(), ice_class=self.ice.currentData(),
-                    ets_scope_override=self.scope_override, ets_coverage_ratio=self.coverage_ratio)
+        return Ship(imo=self.loaded.imo if self.loaded else "", name="", ship_type="",
+                    category=self.category.currentData(), gross_tonnage=self.gt.value(),
+                    ice_class=self.ice.currentData(), ets_scope_override=self.scope_override,
+                    ets_coverage_ratio=self.coverage_ratio)
 
     def emissions(self) -> AnnualEmissions:
         if self.loaded_em is not None:
@@ -268,47 +291,249 @@ class EtsCalculator(QWidget):
         tot = co2.total or 1.0
         return AnnualEmissions(co2=co2, ch4=co2.scaled(self.ch4.value() / tot), n2o=co2.scaled(self.n2o.value() / tot))
 
-    # ------------------------------------------------------------------ compute
-    def recompute(self) -> None:
-        ship, em = self.ship(), self.emissions()
-        prices = YearSeries({y: s.value() for y, s in self.prices.items()})
-        path = cost_path(ship, em, prices, YEARS, self.rules)
-        self.path = path
-        full = next((r for r in path if r.year == 2026), path[-1])
-        total_co2e = sum(em.gas(g).total * self.rules.gwp[g] for g in self.rules.gwp)
-        self.k_cov.value.setText(num(full.covered))
-        self.k_share.value.setText(pct(full.covered / total_co2e) if total_co2e else "–")
-        self.k_year.value.setText(eur_short(full.cost))
-        self.k_total.value.setText(eur_short(total_cost(path)))
-        self.scope_warn.setVisible(not any(r.in_scope for r in path))
-        self.chart.set_data([r.year for r in path], [r.cost for r in path], theme.current().ets)
-        self._fill_table()
+    def fuel_mix(self) -> F.FuelMix:
+        f1, f2, s = self.fuel1.currentData(), self.fuel2.currentData(), self.share1.value() / 100
+        if not f2 or f2 == f1 or s >= 1:
+            return {f1: 1.0}
+        return F.normalise({f1: s, f2: 1 - s})
 
-    def _fill_table(self) -> None:
-        cols = ["ets.col.year", "ets.col.covered", "ets.col.phase", "ets.col.allowances", "ets.col.price",
-                "ets.col.cost"]
-        self.table.setHorizontalHeaderLabels([tr(c) for c in cols])
-        self.table.setRowCount(len(self.path))
-        for i, r in enumerate(self.path):
-            vals = [str(r.year), num(r.covered), pct(r.phase_in), num(r.allowances), num(r.price, 2), num(r.cost)]
-            for j, v in enumerate(vals):
-                it = QTableWidgetItem(v)
-                it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                self.table.setItem(i, j, it)
+    def eu_share_value(self) -> EuShare:
+        if self.share_estimate is not None:
+            return self.share_estimate
+        return user_share(self.eu_share.value() / 100)
+
+    def profile(self) -> Profile:
+        return Profile(ship=self.ship(), emissions=self.emissions(), fuel_mix=self.fuel_mix(),
+                       cii_type=self.cii_type.currentData(), capacity=self.capacity.value(),
+                       distance_nm=self.distance.value(), domestic_only=self.domestic.isChecked(),
+                       eu_share=self.eu_share_value())
+
+    def scenario(self, view: str) -> Scenario:
+        return Scenario(eua=YearSeries({y: s.value() for y, s in self.prices.items()}),
+                        nzf=self.nzf.currentData(), view=view)
+
+    # ------------------------------------------------------------------ from EU MRV
+    def _fill(self, vals: dict, category, ice, fuel_mix: F.FuelMix, cii_type, domestic: bool) -> None:
+        self._filling = True
+        try:
+            self.gt.setValue(vals["gt"])
+            for k in EU_SCOPES:
+                self.scope[k].setValue(vals[k])
+            self.ch4.setValue(vals["ch4"])
+            self.n2o.setValue(vals["n2o"])
+            self.category.select(category)
+            if ice and self.ice.findData(ice) < 0:
+                self.ice.items.append((lambda i=ice: i, ice))
+                self.ice.addItem(ice, ice)
+            self.ice.select(ice)
+            fuels = sorted(fuel_mix.items(), key=lambda kv: -kv[1])
+            self.fuel1.select(fuels[0][0])
+            self.share1.setValue(round(fuels[0][1] * 100))
+            self.fuel2.select(fuels[1][0] if len(fuels) > 1 else None)
+            self.cii_type.select(cii_type)
+            self.capacity.setValue(vals["capacity"])
+            self.distance.setValue(vals["distance"])
+            self.domestic.setChecked(domestic)
+            self.eu_share.setValue(vals["eu_share"])
+        finally:
+            self._filling = False
+        self._cii_type_changed()
+
+    def load_ship(self, ship_year) -> None:
+        if ship_year is None:
+            return
+        p = ship_year.profile()
+        em = p.emissions
+        vals = {"gt": p.ship.gross_tonnage, "ch4": em.ch4.total, "n2o": em.n2o.total, "capacity": 0,
+                "distance": p.distance_nm, "eu_share": round(p.eu_share.share * 100)}
+        vals.update({k: getattr(em.co2, k) for k in EU_SCOPES})
+        self._fill(vals, p.ship.category, p.ship.ice_class, p.fuel_mix, p.cii_type, p.domestic_only)
+        self.loaded, self.loaded_em = ship_year, em
+        self.scope_override, self.coverage_ratio = p.ship.ets_scope_override, p.ship.ets_coverage_ratio
+        self.share_estimate = p.eu_share
+        self.source_text.set_key("ets.from_mrv", name=p.ship.name, imo=p.ship.imo, year=ship_year.year)
+        if self.coverage_ratio is not None:
+            self.ratio_text.set_key("ets.ratio", pct=pct(min(max(self.coverage_ratio, 0), 1), 1),
+                                    until=self.rules.ets.derogations_until)
+        self.ratio_text.setVisible(self.coverage_ratio is not None)
+        cf = ship_year.co2_per_fuel()
+        _, kind = F.infer_mix(cf)
+        if cf and kind in ("oil", "lng"):
+            self.fuel_more.set_key(f"in.fuel.more.{kind}", cf=num(cf, 3))
+            self.fuel_more.show()
+        self.source.show()
+        self._show_share_method()
+        self.changed.emit()
+
+    def reset_example(self) -> None:
+        self._fill(DEFAULTS, ShipCategory.CARGO, None, {"hfo": 1.0}, "bulk", False)
+        self.loaded = self.loaded_em = self.scope_override = self.coverage_ratio = self.share_estimate = None
+        self.source.hide()
+        self.fuel_more.hide()
+        self._show_share_method()
+        self.changed.emit()
+
+    def _show_share_method(self) -> None:
+        e = self.share_estimate
+        method = e.method if e is not None else "user"
+        self.ww_method.set_key(f"ww.method.{method}")
+        self.ww_more.setVisible(e is not None and e.sea_days is not None and e.mrv_hours is not None)
+        if e is not None and e.sea_days and e.mrv_hours:
+            self.ww_more.set_key("ww.more", hours=num(e.mrv_hours), days=num(e.sea_days),
+                                 share=pct(min(e.mrv_hours / (e.sea_days * 24), 1.0)), low=pct(e.low), high=pct(e.high))
+
+    # ------------------------------------------------------------------ language
+    def retranslate(self) -> None:
+        self.reset_btn.setText(amp(tr("ets.reset")))
+        self.domestic.setText(tr("in.domestic"))
+        for c in (self.category, self.ice, self.cii_type, self.fuel1, self.fuel2, self.nzf):
+            c.retranslate()
+        loc = ui_locale()
+        self._filling = True
+        try:
+            for s in self.findChildren(QDoubleSpinBox):
+                s.setLocale(loc)
+                s.setValue(s.value())
+        finally:
+            self._filling = False
+        for rm in self.findChildren(ReadMore):
+            rm.retranslate()
+        self._show_share_method()
+
+
+# =============================================================================== results
+class Results(QWidget):
+    def __init__(self, rules: Rules):
+        super().__init__()
+        self.rules = rules
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(12)
+        kp = Panel()
+        kg = QGridLayout()
+        kg.setHorizontalSpacing(24)
+        self.k_total = Kpi("kpi.total", a=YEARS[0], b=YEARS[-1])
+        self.k_2030 = Kpi("kpi.year", year=2030)
+        self.k_2035 = Kpi("kpi.year", year=2035)
+        self.k_cii = Kpi("kpi.cii", year=2030)
+        for i, k in enumerate((self.k_total, self.k_2030, self.k_2035, self.k_cii)):
+            kg.addWidget(k, 0, i)
+            kg.setColumnStretch(i, 1)
+        kp.body.addLayout(kg)
+        self.estimate_note = TrLabel("ww.method.estimated", "Estimate")
+        kp.body.addWidget(self.estimate_note)
+        self.scope_warn = TrLabel("ets.out_of_scope", "Warning", wrap=True)
+        kp.body.addWidget(self.scope_warn)
+        v.addWidget(kp)
+
+        self.tabs = QTabWidget()
+        self.tab_keys = ["reg.tab.overview", "reg.tab.ets", "reg.tab.fueleu", "reg.tab.nzf", "reg.tab.cii",
+                         "reg.tab.params"]
+        ov = QWidget()
+        ol = QVBoxLayout(ov)
+        ol.setContentsMargins(0, 8, 0, 0)
+        p = Panel("chart.overview")
+        self.ov_chart = StackedBarChart(axis="money")
+        p.body.addWidget(self.ov_chart)
+        ol.addWidget(p)
+        self.ov_table = new_table()
+        ol.addWidget(self.ov_table)
+        self.reg_charts: dict[str, BarChart] = {}
+        self.reg_tables: dict[str, QTableWidget] = {}
+        pages = [ov]
+        for key in ("ets", "fueleu", "nzf"):
+            w = QWidget()
+            wl = QVBoxLayout(w)
+            wl.setContentsMargins(0, 8, 0, 0)
+            p = Panel(f"chart.{key}")
+            self.reg_charts[key] = BarChart()
+            p.body.addWidget(self.reg_charts[key])
+            wl.addWidget(p)
+            self.reg_tables[key] = new_table()
+            wl.addWidget(self.reg_tables[key])
+            pages.append(w)
+        cw = QWidget()
+        cl = QVBoxLayout(cw)
+        cl.setContentsMargins(0, 8, 0, 0)
+        self.cii_missing = TrLabel("cii.need_capacity", "Warning", wrap=True)
+        cl.addWidget(self.cii_missing)
+        self.cii_table = new_table()
+        cl.addWidget(self.cii_table)
+        cl.addWidget(ReadMore("cii.more"))
+        cl.addStretch(1)
+        pages.append(cw)
+        self.params = ParamsTable()
+        pages.append(self.params)
+        for w, k in zip(pages, self.tab_keys, strict=True):
+            self.tabs.addTab(w, amp(tr(k)))
+        v.addWidget(self.tabs, 1)
+        self.results: list[YearResult] = []
+
+    def display(self, results: list[YearResult], view: str, share: EuShare | None) -> None:
+        self.results = results
+        r = {x.year: x for x in results}
+        self.k_total.value.setText(eur_short(sum(x.total_eur for x in results)))
+        self.k_2030.value.setText(eur_short(r[2030].total_eur))
+        self.k_2035.value.setText(eur_short(r[2035].total_eur))
+        c = r[2030].cii
+        self.k_cii.value.setText(c.rating if c and not math.isnan(c.attained) else "–")
+        self.estimate_note.setVisible(view == "ww" and share is not None and share.method == "estimated")
+        self.scope_warn.setVisible(not any(x.ets.in_scope for x in results))
+        p = theme.current()
+        years = [x.year for x in results]
+        self.ov_chart.set_data(years, [(tr("legend.ets_cost"), [x.ets.cost for x in results], p.ets),
+                                       (tr("legend.fueleu"), [x.fueleu.penalty for x in results], p.fueleu),
+                                       (tr("legend.nzf"), [max(x.nzf.cost_eur, 0) for x in results], p.imo)])
+
+        def rating(x):
+            return x.cii.rating if x.cii and not math.isnan(x.cii.attained) else "–"
+
+        fill_table(self.ov_table, ["col.year", "col.ets", "col.fueleu", "col.nzf", "col.total", "col.cii"],
+                   [[str(x.year), num(x.ets.cost), num(x.fueleu.penalty), num(x.nzf.cost_eur), num(x.total_eur),
+                     rating(x)] for x in results])
+        self.reg_charts["ets"].set_data(years, [x.ets.cost for x in results], p.ets)
+        fill_table(self.reg_tables["ets"], ["ets.col.year", "ets.col.covered", "ets.col.phase", "ets.col.allowances",
+                                            "ets.col.price", "ets.col.cost"],
+                   [[str(x.year), num(x.ets.covered), pct(x.ets.phase_in), num(x.ets.allowances), num(x.ets.price, 2),
+                     num(x.ets.cost)] for x in results])
+        self.reg_charts["fueleu"].set_data(years, [x.fueleu.penalty for x in results], p.fueleu)
+        fill_table(self.reg_tables["fueleu"], ["col.year", "col.energy", "col.intensity", "col.target", "col.balance",
+                                               "col.penalty"],
+                   [[str(x.year), num(x.fueleu.energy_mj / 1000),
+                     num(x.fueleu.intensity, 2) if x.fueleu.in_scope else "–", num(x.fueleu.target, 2),
+                     num(x.fueleu.balance_t), num(x.fueleu.penalty)] for x in results])
+        self.reg_charts["nzf"].set_data(years, [max(x.nzf.cost_eur, 0) for x in results], p.imo)
+        fill_table(self.reg_tables["nzf"], ["col.year", "col.energy", "col.gfi", "col.base", "col.direct", "col.tier2",
+                                            "col.tier1", "col.surplus", "col.cost"],
+                   [[str(x.year), num(x.nzf.energy_mj / 1000), num(x.nzf.gfi, 2) if x.nzf.applies else "–",
+                     num(x.nzf.base, 2) if x.nzf.base else "–", num(x.nzf.direct, 2) if x.nzf.direct else "–",
+                     num(x.nzf.tier2_t), num(x.nzf.tier1_t), num(x.nzf.surplus_t),
+                     num(x.nzf.cost_eur) if x.nzf.applies else tr("na")] for x in results])
+        have = any(x.cii and not math.isnan(x.cii.attained) for x in results)
+        self.cii_missing.setVisible(not have)
+        self.cii_table.setVisible(have)
+        if have:
+            rows, colors = [], {}
+            rc = {"A": "good", "B": "good", "C": "muted", "D": "warn", "E": "bad"}
+            for i, x in enumerate(x for x in results if x.year >= 2023):
+                rows.append([str(x.year), num(x.cii.attained, 2), num(x.cii.required, 2), num(x.cii.ratio, 3),
+                             x.cii.rating])
+                colors[(i, 4)] = theme.c(rc[x.cii.rating])
+            fill_table(self.cii_table, ["col.year", "col.attained", "col.required", "col.ratio", "col.rating"],
+                       rows, colors)
 
     def retranslate(self) -> None:
-        self.reset_btn.setText(tr("ets.reset"))
-        loc = ui_locale()
-        for s in self.findChildren(QDoubleSpinBox):
-            s.setLocale(loc)
-            s.setValue(s.value())            # redraw with the new separators
-        self.category.retranslate()
-        self.ice.retranslate()
-        self.recompute()
+        for i, k in enumerate(self.tab_keys):
+            self.tabs.setTabText(i, amp(tr(k)))
+        for rm in self.findChildren(ReadMore):
+            rm.retranslate()
+        self.params.fill()
 
     def restyle(self) -> None:
-        self.chart.restyle()
-        self.recompute()
+        self.ov_chart.restyle()
+        for ch in self.reg_charts.values():
+            ch.restyle()
+        self.params.fill()
 
 
 class ParamsTable(QWidget):
@@ -327,8 +552,9 @@ class ParamsTable(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.setWordWrap(True)
         h = self.table.horizontalHeader()
-        h.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        h.setStretchLastSection(True)
+        self.table.setMinimumHeight(560)
         v.addWidget(self.table)
         self.sets = [P.load(n) for n in P.available()]
         self.fill()
@@ -337,51 +563,65 @@ class ParamsTable(QWidget):
         self.table.setHorizontalHeaderLabels([tr(c) for c in self.COLS])
         rows = [(ps, p) for ps in self.sets for p in ps.values.values()]
         self.table.setRowCount(len(rows))
-        theme.current()
         for i, (ps, p) in enumerate(rows):
             src = ps.source_of(p.key)
             value = p.value if isinstance(p.value, (int, float, str)) else json.dumps(p.value, ensure_ascii=False)
+            if len(str(value)) > 90:
+                value = str(value)[:88] + "…"
             ok = p.status == P.VERIFIED
             cells = [f"{ps.name}.{p.key}", str(value), src.title, src.checked,
                      tr("params.verified") if ok else tr("params.verify")]
             for j, text in enumerate(cells):
                 it = QTableWidgetItem(text)
-                tip = "\n".join(x for x in (p.note, src.url) if x)
-                if tip:
-                    it.setToolTip(tip)
+                tip = "\n".join(x for x in (p.note, src.url, json.dumps(p.value, ensure_ascii=False)[:600]) if x)
+                it.setToolTip(tip)
                 if j == 4:
                     it.setForeground(theme.c("good" if ok else "warn"))
                 self.table.setItem(i, j, it)
-        self.table.resizeRowsToContents()
+        for col, width in ((0, 260), (1, 260), (2, 360), (3, 90)):
+            self.table.setColumnWidth(col, width)
 
 
+# =============================================================================== page
 class RegulationPage(Page):
     title_key = "reg.title"
     lede_key = "reg.lede"
 
     def __init__(self, state=None):
         super().__init__(state)
-        self.tabs = QTabWidget()
-        self.ets = EtsCalculator(state)
-        self.params = ParamsTable()
-        self.fueleu = TrLabel("placeholder.phase", "Placeholder", n=1)
-        self.nzf = TrLabel("placeholder.phase", "Placeholder", n=1)
-        for w in (self.fueleu, self.nzf):
-            w.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        self.tab_keys = ["reg.tab.ets", "reg.tab.fueleu", "reg.tab.nzf", "reg.tab.params"]
-        for w, k in zip((self.ets, self.fueleu, self.nzf, self.params), self.tab_keys, strict=True):
-            self.tabs.addTab(w, amp(tr(k)))
-        self.lay.addWidget(self.tabs, 1)
+        self.rules = Rules.load()
+        row = QHBoxLayout()
+        row.setSpacing(16)
+        self.inputs = Inputs(state, self.rules)
+        self.inputs.setFixedWidth(410)
+        row.addWidget(self.inputs, 0, Qt.AlignmentFlag.AlignTop)
+        self.out = Results(self.rules)
+        row.addWidget(self.out, 1)
+        self.lay.addLayout(row, 1)
+        self.inputs.changed.connect(self.recompute)
+        if state is not None:
+            state.ship_changed.connect(self.inputs.load_ship)
+            state.view_changed.connect(lambda _: self.recompute())
+        self.recompute()
+
+    @property
+    def view(self) -> str:
+        return self.state.view if self.state is not None else "eu"
+
+    def recompute(self) -> None:
+        self.inputs.ww.setVisible(self.view == "ww")
+        prof = self.inputs.profile()
+        self.results = evaluate(prof, self.inputs.scenario(self.view), YEARS, self.rules)
+        self.out.display(self.results, self.view, prof.eu_share)
 
     def unverified_count(self) -> int:
-        return sum(len(ps.unverified()) for ps in self.params.sets)
+        return sum(len(ps.unverified()) for ps in self.out.params.sets)
 
     def on_language(self) -> None:
-        for i, k in enumerate(self.tab_keys):
-            self.tabs.setTabText(i, amp(tr(k)))
-        self.ets.retranslate()
-        self.params.fill()
+        self.inputs.retranslate()
+        self.out.retranslate()
+        self.recompute()
 
     def on_theme(self) -> None:
-        self.ets.restyle()
-        self.params.fill()
+        self.out.restyle()
+        self.recompute()

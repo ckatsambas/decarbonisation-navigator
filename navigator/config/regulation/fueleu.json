@@ -1,0 +1,102 @@
+{
+  "name": "fueleu",
+  "title": {
+    "el": "FuelEU Maritime",
+    "en": "FuelEU Maritime"
+  },
+  "sources": {
+    "ec_method": {
+      "title": "European Commission (ESSF SAPS WS1), FuelEU Maritime calculation methodologies, incl. Annex II default factors of Regulation (EU) 2023/1805",
+      "url": "https://transport.ec.europa.eu/document/download/7b55d8dd-ce19-4e94-9091-fb710570b7f7_en?filename=ESSF_SAPS_WS1-FuelEU_calculation_methodologies.pdf",
+      "checked": "2026-10-24"
+    },
+    "reg_2023_1805": {
+      "title": "Regulation (EU) 2023/1805 (FuelEU Maritime)",
+      "url": "https://eur-lex.europa.eu/eli/reg/2023/1805/oj",
+      "checked": "2026-10-24"
+    },
+    "assume": {
+      "title": "Modelling assumption of this application (no official value yet); documented in docs/decisions/0005",
+      "checked": "2026-10-24"
+    }
+  },
+  "values": {
+    "reference": {
+      "value": 91.16,
+      "source": "ec_method",
+      "note": "gCO2e/MJ, well-to-wake."
+    },
+    "reductions": {
+      "value": {
+        "2025": 0.02,
+        "2030": 0.06,
+        "2035": 0.145,
+        "2040": 0.31,
+        "2045": 0.62,
+        "2050": 0.8
+      },
+      "source": "ec_method",
+      "note": "Step changes; each applies from 1 January of the year shown."
+    },
+    "first_year": {
+      "value": 2025,
+      "source": "reg_2023_1805"
+    },
+    "penalty_eur_per_t_vlsfo": {
+      "value": 2400,
+      "source": "ec_method"
+    },
+    "vlsfo_mj_per_t": {
+      "value": 41000,
+      "source": "ec_method"
+    },
+    "consecutive_increment": {
+      "value": 0.1,
+      "source": "ec_method",
+      "note": "Penalty × (1 + (n − 1) × 0.1) for the n-th consecutive deficit period."
+    },
+    "rfnbo_reward": {
+      "value": {
+        "factor": 2,
+        "until": 2033
+      },
+      "source": "ec_method"
+    },
+    "coverage": {
+      "value": {
+        "intra_eu": 1.0,
+        "in_port": 1.0,
+        "from_eu": 0.5,
+        "to_eu": 0.5,
+        "outside": 0.0
+      },
+      "source": "ec_method"
+    },
+    "gwp100": {
+      "value": {
+        "co2": 1,
+        "ch4": 25,
+        "n2o": 298
+      },
+      "source": "ec_method",
+      "note": "FuelEU uses AR4 values, unlike the EU ETS (28/265)."
+    },
+    "min_gross_tonnage": {
+      "value": 5000,
+      "source": "reg_2023_1805"
+    },
+    "categories_from": {
+      "value": {
+        "cargo": 2025,
+        "passenger": 2025
+      },
+      "source": "reg_2023_1805"
+    },
+    "derogations_until": {
+      "value": 2029,
+      "source": "reg_2023_1805",
+      "status": "verify",
+      "note": "Island and outermost-region exemptions; the observed EU ETS coverage ratio is used as a proxy until this year (docs/decisions/0005)."
+    }
+  }
+}

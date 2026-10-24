@@ -33,7 +33,7 @@ START_PAGE = "nav.ship"
 class Segmented(QWidget):
     """Two or more mutually exclusive buttons (language, theme)."""
 
-    def __init__(self, options: list[tuple[str, str]], current: str, on_pick):
+    def __init__(self, options: list[tuple[str, str]], current: str, on_pick, small: bool = False):
         super().__init__()
         h = QHBoxLayout(self)
         h.setContentsMargins(0, 0, 0, 0)
@@ -42,7 +42,7 @@ class Segmented(QWidget):
         self.buttons: dict[str, QPushButton] = {}
         for value, text in options:
             b = QPushButton(text)
-            b.setObjectName("Segment")
+            b.setObjectName("SegmentSmall" if small else "Segment")
             b.setCheckable(True)
             b.setChecked(value == current)
             b.clicked.connect(lambda _=False, v=value: on_pick(v))
@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings = QSettings()
         self.state = state or AppState()
+        saved_view = self.settings.value("view", "eu")
+        self.state.set_view(saved_view if saved_view in ("eu", "ww") else "eu")
+        self.state.view_changed.connect(lambda v: self.settings.setValue("view", v))
         self.resize(1440, 920)
         self.setMinimumSize(1100, 700)
 
@@ -130,6 +133,12 @@ class MainWindow(QMainWindow):
         h.setContentsMargins(24, 8, 24, 8)
         h.setSpacing(10)
         h.addStretch(1)
+        self.view_label = TrLabel("top.view", "TopLabel")
+        h.addWidget(self.view_label)
+        self.view_switch = Segmented([("eu", "EU"), ("ww", "WW")], self.state.view, self.state.set_view, small=True)
+        h.addWidget(self.view_switch)
+        self.state.view_changed.connect(lambda v: self.view_switch.buttons[v].setChecked(True))
+        h.addSpacing(14)
         self.lang_label = TrLabel("top.language", "TopLabel")
         h.addWidget(self.lang_label)
         self.lang_switch = Segmented([("el", "ΕΛ"), ("en", "EN")], i18n.language(), i18n.set_language)
@@ -157,8 +166,9 @@ class MainWindow(QMainWindow):
     def retranslate(self) -> None:
         self.settings.setValue("language", i18n.language())
         self.setWindowTitle(tr("app.name"))
-        for w in (self.wordmark, self.tagline, self.lang_label, self.theme_label, *self.nav_labels):
+        for w in (self.wordmark, self.tagline, self.view_label, self.lang_label, self.theme_label, *self.nav_labels):
             w.retranslate()
+        self.view_switch.setToolTip(tr("top.view.tip"))
         for b, key in self.nav_buttons:
             b.setText(amp(tr(key)))
         self.theme_switch.buttons["dark"].setText(tr("theme.dark"))

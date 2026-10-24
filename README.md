@@ -16,7 +16,7 @@ undergraduate thesis at the University of West Attica.
 |---|---|---|
 | 0 | Foundation, engine skeleton, EU ETS cost engine, bilingual shell, CI | done |
 | 0.5 | EU MRV ship database (2018–2025), Ship page, ETS validated against EMSA | done |
-| 1 | FuelEU Maritime, IMO NZF scenarios, CII, combined regulatory timeline | next |
+| 1 | FuelEU Maritime, IMO NZF scenarios, CII, combined timeline, EU/WW views | done (v0.1.0) |
 | 2 | Ship-type library and real ships by IMO number | planned |
 | 3 | Technology & fuel library with sourced ranges | planned |
 | 4 | Weighting (BWM, AHP, entropy, CRITIC), ranking (SAW, TOPSIS, PROMETHEE II, VIKOR), SMAA-2 | planned |
@@ -27,7 +27,8 @@ undergraduate thesis at the University of West Attica.
 ```
 navigator/
   engine/       calculations only, no interface code; importable from notebooks
-    regulation/ EU ETS (done), FuelEU, IMO NZF, CII
+    regulation/ EU ETS, FuelEU Maritime, IMO Net-Zero Framework, CII
+    fuels, estimate, compliance   fuel factors, worldwide estimate, all regimes per year
   data/         EU MRV importer and database (pure Python)
   config/       regulation parameters as JSON, each value with its source and check date
   i18n/         el.json / en.json text catalogues (live language switch)
