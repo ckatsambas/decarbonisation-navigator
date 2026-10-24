@@ -18,6 +18,7 @@ from .. import __version__, i18n
 from ..i18n import tr
 from . import theme
 from .pages import DecisionPage, MeasuresPage, RegulationPage, ReportPage, ShipPage, UncertaintyPage
+from .state import AppState
 from .widgets import TrLabel, amp, label
 
 NAV = [
@@ -26,7 +27,7 @@ NAV = [
     ("nav.group.analysis", [("nav.decision", DecisionPage), ("nav.uncertainty", UncertaintyPage)]),
     ("nav.group.output", [("nav.report", ReportPage)]),
 ]
-START_PAGE = "nav.regulation"   # the only working page in Phase 0
+START_PAGE = "nav.ship"
 
 
 class Segmented(QWidget):
@@ -51,9 +52,10 @@ class Segmented(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, state: AppState | None = None):
         super().__init__()
         self.settings = QSettings()
+        self.state = state or AppState()
         self.resize(1440, 920)
         self.setMinimumSize(1100, 700)
 
@@ -74,7 +76,7 @@ class MainWindow(QMainWindow):
         self.pages = []
         for _, items in NAV:
             for _, cls in items:
-                page = cls()
+                page = cls(self.state)
                 self.pages.append(page)
                 self.stack.addWidget(page)
         keys = [k for _, items in NAV for k, _ in items]

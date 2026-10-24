@@ -11,8 +11,9 @@ class Page(QScrollArea):
     title_key = ""
     lede_key = ""
 
-    def __init__(self):
+    def __init__(self, state=None):
         super().__init__()
+        self.state = state
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         inner = QWidget()
@@ -45,8 +46,8 @@ class PlaceholderPage(Page):
 
     phase = 1
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, state=None):
+        super().__init__(state)
         self.lay.addWidget(TrLabel("placeholder.phase", "Placeholder", n=self.phase))
         self.lay.addStretch(1)
 

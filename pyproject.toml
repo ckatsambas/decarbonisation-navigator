@@ -16,6 +16,7 @@ dependencies = [
   "openpyxl>=3.1",
   "pyqtgraph>=0.13.7",
   "matplotlib>=3.9",
+  "python-calamine>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -35,5 +36,10 @@ testpaths = ["tests"]
 qt_api = "pyside6"
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
+
+[tool.ruff.lint]
+# Explicit rule set so new ruff releases do not change what CI checks
+select = ["E4", "E7", "E9", "F", "I", "B", "UP", "W"]
+ignore = ["E731"]

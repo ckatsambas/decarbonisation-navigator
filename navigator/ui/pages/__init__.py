@@ -1,7 +1,7 @@
 from .base import Page, placeholder
 from .regulation import RegulationPage
+from .ship import ShipPage
 
-ShipPage = placeholder("page.ship.title", "page.ship.lede", 2)
 MeasuresPage = placeholder("page.measures.title", "page.measures.lede", 3)
 DecisionPage = placeholder("page.decision.title", "page.decision.lede", 4)
 UncertaintyPage = placeholder("page.uncertainty.title", "page.uncertainty.lede", 4)

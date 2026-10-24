@@ -24,11 +24,11 @@ def label(text: str = "", name: str | None = None, wrap: bool = False) -> QLabel
 class TrLabel(QLabel):
     """A label bound to a translation key; call retranslate() after a language change."""
 
-    def __init__(self, key: str, name: str | None = None, wrap: bool = False, **fmt):
+    def __init__(self, key: str, obj_name: str | None = None, wrap: bool = False, **fmt):
         super().__init__()
         self.key, self.fmt = key, fmt
-        if name:
-            self.setObjectName(name)
+        if obj_name:
+            self.setObjectName(obj_name)
         self.setWordWrap(wrap)
         self.retranslate()
 

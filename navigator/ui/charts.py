@@ -63,3 +63,58 @@ class BarChart(pg.PlotWidget):
 
     def restyle(self) -> None:
         style_plot(self)
+
+
+class StackedBarChart(pg.PlotWidget):
+    """Bars by year split into stacked components, with an optional line on top (e.g. a reported total)."""
+
+    def __init__(self, axis: str = "number"):
+        left = MoneyAxis("left") if axis == "money" else NumberAxis("left")
+        super().__init__(axisItems={"left": left, "bottom": YearAxis("bottom")})
+        self.setMinimumHeight(240)
+        self.setMenuEnabled(False)
+        self.setMouseEnabled(x=False, y=False)
+        self.hideButtons()
+        self.legend = None
+        style_plot(self)
+
+    def set_data(self, years: list[int], series: list[tuple[str, list[float], str]],
+                 line: tuple[str, list[float | None], str] | None = None) -> None:
+        self.clear()
+        if self.legend is None:
+            self.legend = self.addLegend(offset=(8, 4), colCount=len(series) + 1)
+        self.legend.clear()
+        self.legend.setLabelTextColor(theme.current().muted)
+        base = [0.0] * len(years)
+        for name, vals, color in series:
+            item = pg.BarGraphItem(x=years, height=vals, y0=base, width=0.66, brush=QColor(color), pen=pg.mkPen(None),
+                                   name=name)
+            self.addItem(item)            # named items join the legend automatically
+            base = [b + v for b, v in zip(base, vals, strict=True)]
+        top = max(base, default=0)
+        if line:
+            name, vals, color = line
+            pts = [(y, v) for y, v in zip(years, vals, strict=True) if v is not None]
+            if pts:
+                xs, ys = zip(*pts, strict=True)
+                self.plot(xs, ys, pen=pg.mkPen(color, width=2), symbol="o", symbolSize=6,
+                          symbolBrush=QColor(color), symbolPen=pg.mkPen(None), name=name)
+                top = max(top, max(ys))
+        if years:
+            self.setXRange(years[0] - 0.7, years[-1] + 0.7, padding=0)
+            self.setYRange(0, max(top, 1) * 1.15, padding=0)
+
+    def restyle(self) -> None:
+        style_plot(self)
+
+
+class NumberAxis(pg.AxisItem):
+    """Plain quantities (tonnes) with k/m suffixes."""
+
+    def tickStrings(self, values, scale, spacing):
+        top = max((abs(v) for v in values), default=0)
+        if top >= 1e6:
+            return [num(v / 1e6, 1) + "m" for v in values]
+        if top >= 1e4:
+            return [num(v / 1e3, 0) + "k" for v in values]
+        return [num(v, 0) for v in values]
