@@ -105,6 +105,15 @@ QPushButton#NavButton:checked {{ color: {p.text}; background: {p.panel}; border-
 #KpiLabel {{ color: {p.muted}; font-size: 7.5pt; font-weight: 600; letter-spacing: 1.2px; }}
 #KpiValue {{ font-size: 17pt; font-weight: 600; }}
 #Placeholder {{ background: {p.panel}; border: 1px dashed {p.border}; border-radius: 6px; padding: 24px; color: {p.muted}; }}
+QToolButton#ReadMore {{ border: none; background: transparent; color: {p.faint}; font-size: 8.5pt; padding: 0; }}
+QToolButton#ReadMore:hover, QToolButton#ReadMore:checked {{ color: {p.accent}; }}
+#ReadMoreBody {{ color: {p.muted}; font-size: 8.5pt; background: {p.panel_alt}; border-radius: 4px; padding: 8px 10px; }}
+#Estimate {{ color: {p.warn}; font-size: 8.5pt; }}
+QCheckBox {{ spacing: 8px; }}
+QCheckBox::indicator {{ width: 15px; height: 15px; border: 1px solid {p.faint}; border-radius: 3px; background: {p.panel_alt}; }}
+QCheckBox::indicator:checked {{ background: {p.accent}; border-color: {p.accent}; }}
+QPushButton#SegmentSmall {{ border-radius: 0; padding: 2px 8px; font-size: 8pt; min-width: 26px; }}
+QPushButton#SegmentSmall:checked {{ background: {p.panel_alt}; color: {p.accent}; border-color: {p.accent}; font-weight: 600; }}
 #Warning {{ background: {p.panel_alt}; border-left: 3px solid {p.warn}; border-radius: 3px; padding: 8px 12px; }}
 
 QLineEdit, QDoubleSpinBox, QSpinBox, QComboBox {{

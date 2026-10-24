@@ -67,3 +67,36 @@ class Kpi(QWidget):
         self.value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         v.addWidget(self.caption)
         v.addWidget(self.value)
+
+
+class ReadMore(QWidget):
+    """A quiet "Read more" link that unfolds an explanation (used for every estimate)."""
+
+    def __init__(self, key: str, **fmt):
+        from PySide6.QtWidgets import QToolButton
+        super().__init__()
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(4)
+        self.toggle = QToolButton()
+        self.toggle.setObjectName("ReadMore")
+        self.toggle.setCheckable(True)
+        self.toggle.setArrowType(Qt.ArrowType.RightArrow)
+        self.toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.toggle.toggled.connect(self._toggled)
+        v.addWidget(self.toggle, 0, Qt.AlignmentFlag.AlignLeft)
+        self.body = TrLabel(key, "ReadMoreBody", wrap=True, **fmt)
+        self.body.hide()
+        v.addWidget(self.body)
+        self.retranslate()
+
+    def _toggled(self, on: bool) -> None:
+        self.toggle.setArrowType(Qt.ArrowType.DownArrow if on else Qt.ArrowType.RightArrow)
+        self.body.setVisible(on)
+
+    def set_key(self, key: str, **fmt) -> None:
+        self.body.set_key(key, **fmt)
+
+    def retranslate(self) -> None:
+        self.toggle.setText(tr("readmore"))
+        self.body.retranslate()

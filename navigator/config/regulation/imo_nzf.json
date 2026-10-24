@@ -1,0 +1,140 @@
+{
+  "name": "imo_nzf",
+  "title": {
+    "el": "IMO Net-Zero Framework (σχέδιο MEPC 83)",
+    "en": "IMO Net-Zero Framework (MEPC 83 draft)"
+  },
+  "sources": {
+    "abs_mepc83": {
+      "title": "ABS, MEPC 83 brief (April 2025): reference GFI, 2040 base target, remedial unit prices, scope",
+      "url": "https://ww2.eagle.org/content/dam/eagle/regulatory-news/2025/MEPC-83-Brief.pdf",
+      "checked": "2026-10-24"
+    },
+    "shipcalc": {
+      "title": "ShipCalculators, IMO Net-Zero Framework and GFI: base/direct targets 2028, 2030, 2035",
+      "url": "https://shipcalculators.com/wiki/imo-net-zero-framework-gfi",
+      "checked": "2026-10-24"
+    },
+    "dnv_mepc83": {
+      "title": "DNV, IMO MEPC 83: GHG requirements approved (scope, surplus units, 2040 base target)",
+      "url": "https://www.dnv.com/news/2025/imo-mepc-83-ghg-requirements-approved-taking-effect-from-2028/",
+      "checked": "2026-10-24"
+    },
+    "bancaditalia": {
+      "title": "Banca d'Italia, euro reference rate 15 Sep 2026: 1.1539 USD per EUR",
+      "url": "https://www.bancaditalia.it/compiti/operazioni-cambi/cambio/cambi_rif_20260915",
+      "checked": "2026-10-24"
+    },
+    "assume": {
+      "title": "Modelling assumption of this application (no official value yet); documented in docs/decisions/0005",
+      "checked": "2026-10-24"
+    }
+  },
+  "values": {
+    "reference": {
+      "value": 93.3,
+      "source": "abs_mepc83",
+      "note": "gCO2e/MJ, 2008 international-shipping average (well-to-wake)."
+    },
+    "base_target": {
+      "value": {
+        "2028": 0.04,
+        "2030": 0.08,
+        "2035": 0.3,
+        "2040": 0.65
+      },
+      "source": "shipcalc",
+      "note": "Anchor years confirmed by several sources; years between are interpolated linearly."
+    },
+    "direct_target": {
+      "value": {
+        "2028": 0.17,
+        "2030": 0.21,
+        "2035": 0.43
+      },
+      "source": "shipcalc",
+      "note": "Anchor years; years between are interpolated linearly."
+    },
+    "interpolation": {
+      "value": "linear between anchor years",
+      "source": "assume",
+      "status": "verify",
+      "note": "Matches the draft's year-by-year table as understood (e.g. 2029: 6%/19%, 2031: 12.4%/25.4%); confirm against the official MARPOL Annex VI text."
+    },
+    "direct_target_after_2035": {
+      "value": {
+        "2040": 0.78,
+        "2050": 1.0
+      },
+      "source": "assume",
+      "status": "verify",
+      "note": "Not yet set by IMO. Assumes the 13-point gap of 2035 is kept to 2040 and both targets reach 100% by 2050."
+    },
+    "base_target_after_2040": {
+      "value": {
+        "2050": 1.0
+      },
+      "source": "assume",
+      "status": "verify",
+      "note": "Not yet set by IMO; assumes net zero by 2050."
+    },
+    "ru_price_usd": {
+      "value": {
+        "tier1": 100,
+        "tier2": 380
+      },
+      "source": "abs_mepc83",
+      "note": "Initial prices for reporting periods 2028–2030 (USD per t CO2e)."
+    },
+    "ru_price_after_2030": {
+      "value": "constant",
+      "source": "assume",
+      "status": "verify",
+      "note": "The price mechanism from 2031 is to be set by 1 January 2028; prices are held constant in nominal terms."
+    },
+    "surplus_unit_value_usd": {
+      "value": 0,
+      "source": "assume",
+      "status": "verify",
+      "note": "Conservative: surplus units earn nothing unless sold. Varied in the uncertainty analysis."
+    },
+    "gwp100": {
+      "value": {
+        "co2": 1,
+        "ch4": 28,
+        "n2o": 265
+      },
+      "source": "assume",
+      "status": "verify",
+      "note": "IMO LCA guidelines' default factors are pending; FuelEU default fuel factors are used with AR5 GWPs."
+    },
+    "min_gross_tonnage": {
+      "value": 5000,
+      "source": "abs_mepc83"
+    },
+    "excludes_domestic": {
+      "value": true,
+      "source": "dnv_mepc83",
+      "note": "Ships trading solely domestically are excluded."
+    },
+    "eur_per_usd": {
+      "value": 0.8666,
+      "source": "bancaditalia"
+    },
+    "scenarios": {
+      "value": {
+        "as_drafted": {
+          "first_year": 2028
+        },
+        "delayed": {
+          "first_year": 2029
+        },
+        "not_adopted": {
+          "first_year": null
+        }
+      },
+      "source": "assume",
+      "note": "Adoption vote due 4 December 2026. 'Delayed' shifts the start by one year with the same calendar targets."
+    }
+  }
+}

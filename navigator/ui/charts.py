@@ -36,6 +36,7 @@ def style_plot(w: pg.PlotWidget) -> None:
         ax = pi.getAxis(name)
         ax.setPen(pg.mkPen(p.border))
         ax.setTextPen(pg.mkPen(p.muted))
+    pi.getAxis("left").setWidth(56)
     pi.showGrid(x=False, y=True, alpha=0.25)
 
 

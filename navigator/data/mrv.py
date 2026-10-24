@@ -468,6 +468,29 @@ class ShipYear:
         rule = sum(cov.get(k, 0.0) * getattr(s, k) for k in ("intra_eu", "in_port", "from_eu", "to_eu", "outside"))
         return reported / rule if rule > 0 else None
 
+    def co2_per_fuel(self) -> float | None:
+        co2, fuel = self.get("co2_total"), self.get("fuel_total")
+        return co2 / fuel if co2 and fuel else None
+
+    def likely_domestic(self) -> bool:
+        """Only voyages between EU ports, and EMSA counts almost none of them for the ETS:
+        the pattern of a domestic island service (excluded from the IMO Net-Zero Framework)."""
+        e = self.emissions().co2
+        ratio = self.ets_coverage_ratio()
+        return e.from_eu == 0 and e.to_eu == 0 and e.intra_eu > 0 and ratio is not None and ratio < 0.2
+
+    def profile(self):
+        """Engine profile with every value that can be derived from the report."""
+        from ..engine import fuels as F
+        from ..engine.compliance import Profile
+        from ..engine.estimate import estimate_share
+        from ..engine.regulation.cii import cii_type_for
+        mix, _ = F.infer_mix(self.co2_per_fuel())
+        return Profile(ship=self.to_ship(), emissions=self.emissions(), fuel_mix=mix,
+                       cii_type=cii_type_for(self.get("ship_type")), capacity=0.0,
+                       distance_nm=self.get("distance_nm", 0.0), domestic_only=self.likely_domestic(),
+                       eu_share=estimate_share(self.get("ship_type"), self.get("time_at_sea")))
+
     def to_ship(self) -> Ship:
         ets = self.ets_reported_co2e
         ratio = self.ets_coverage_ratio()

@@ -1,0 +1,56 @@
+{
+  "name": "activity",
+  "title": {
+    "el": "Παγκόσμια δραστηριότητα: εκτίμηση",
+    "en": "Worldwide activity: estimate"
+  },
+  "sources": {
+    "provisional": {
+      "title": "Provisional round values pending the Fourth IMO GHG Study 2020 activity tables (days at sea by ship type)",
+      "url": "https://www.imo.org/en/ourwork/Environment/Pages/Fourth-IMO-Greenhouse-Gas-Study-2020.aspx",
+      "checked": "2026-10-24"
+    },
+    "assume": {
+      "title": "Modelling assumption of this application (no official value yet); documented in docs/decisions/0005",
+      "checked": "2026-10-24"
+    }
+  },
+  "values": {
+    "sea_days": {
+      "value": {
+        "Bulk carrier": 230,
+        "Oil tanker": 200,
+        "Chemical tanker": 200,
+        "Container ship": 250,
+        "Container/ro-ro cargo ship": 250,
+        "Gas carrier": 220,
+        "LNG carrier": 260,
+        "General cargo ship": 200,
+        "Refrigerated cargo carrier": 210,
+        "Combination carrier": 220,
+        "Vehicle carrier": 240,
+        "Ro-ro ship": 250,
+        "Ro-pax ship": 250,
+        "Passenger ship": 220,
+        "Passenger ship (Cruise Passenger ship)": 220,
+        "Other ship types": 200,
+        "Other ship types (Offshore)": 180,
+        "default": 220
+      },
+      "source": "provisional",
+      "status": "verify",
+      "note": "Typical days at sea per year. EU share of activity = MRV time at sea ÷ (days × 24), capped at 100%."
+    },
+    "uncertainty": {
+      "value": 0.2,
+      "source": "assume",
+      "status": "verify",
+      "note": "± share applied to the typical days at sea in the uncertainty analysis."
+    },
+    "eu_dominant_threshold": {
+      "value": 0.9,
+      "source": "assume",
+      "note": "At or above this EU share, the ship is treated as trading mainly in the EU and no estimate is needed."
+    }
+  }
+}
