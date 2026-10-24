@@ -90,3 +90,28 @@ def test_coverage_ratio_from_reported_ets(db):
     assert db.history("9000003")[0].to_ship().ets_coverage_ratio is None   # rule matches EMSA exactly
     old = next(h for h in db.history("9000001") if h.year == 2023)
     assert old.ets_coverage_ratio() is None                                 # no ETS figure before 2024
+
+
+def test_bundled_database_created_then_merged(mrv_db_path, tmp_path):
+    import json
+    import lzma
+    import sqlite3
+    bundle = tmp_path / "res" / "mrv.sqlite.xz"
+    bundle.parent.mkdir()
+    bundle.write_bytes(lzma.compress(mrv_db_path.read_bytes()))
+    (bundle.parent / "mrv_manifest.json").write_text(json.dumps(
+        {"releases": [{"year": 2023, "version": 92}, {"year": 2025, "version": 72}]}))
+    user = tmp_path / "user" / "mrv.sqlite"
+    assert mrv.ensure_database(user, bundle) == "created"
+    assert mrv.ensure_database(user, bundle) == "current"
+    con = sqlite3.connect(user)                              # user's copy has an older 2025 release
+    con.execute("UPDATE releases SET version = 50 WHERE year = 2025")
+    con.execute("DELETE FROM reports WHERE year = 2025")
+    con.commit()
+    con.close()
+    assert mrv.ensure_database(user, bundle) == "updated"
+    d = mrv.MrvDatabase(user)
+    assert {r.year: r.version for r in d.releases()} == {2023: 92, 2025: 72}
+    assert d.count() == 3
+    d.close()
+    assert mrv.ensure_database(tmp_path / "x.sqlite", tmp_path / "missing.xz") == "no-bundle"

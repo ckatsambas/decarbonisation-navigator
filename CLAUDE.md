@@ -15,8 +15,10 @@ The thesis is written in Greek; the software is bilingual (Greek default, Englis
 - Record each significant design choice as a new note in `docs/decisions/`.
 - Workflow: commit directly to `main`. Use a branch + PR only when a feature is an
   experiment or goes beyond what was asked, so the author can choose.
-- `navigator/data` (EU MRV) is pure Python like the engine. EMSA's files and the built
-  `data/mrv.sqlite` are never committed; tests use synthetic files from `tests/conftest.py`.
+- `navigator/data` (EU MRV) is pure Python like the engine. EMSA's raw files and
+  `data/mrv.sqlite` are never committed; the shipped copy is `navigator/resources/mrv.sqlite.xz`,
+  refreshed with `tools/bundle_mrv.py` after importing a newer EMSA release. Tests use synthetic
+  files from `tests/conftest.py` and `AppState(..., bundle=False)`.
 - After changing the ETS engine or the importer, rerun `tools/validate_ets.py` and commit
   the updated `docs/validation/` report.
 - Run `python -m pytest` and `ruff check navigator tests tools` before every push.

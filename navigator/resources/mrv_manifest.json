@@ -1,0 +1,49 @@
+{
+  "source": "EMSA THETIS-MRV public emission reports",
+  "url": "https://mrv.emsa.europa.eu",
+  "releases": [
+    {
+      "year": 2018,
+      "version": 275,
+      "generated": "2026-03-29"
+    },
+    {
+      "year": 2019,
+      "version": 228,
+      "generated": "2026-08-13"
+    },
+    {
+      "year": 2020,
+      "version": 210,
+      "generated": "2026-09-25"
+    },
+    {
+      "year": 2021,
+      "version": 219,
+      "generated": "2026-09-25"
+    },
+    {
+      "year": 2022,
+      "version": 241,
+      "generated": "2026-02-06"
+    },
+    {
+      "year": 2023,
+      "version": 92,
+      "generated": "2026-09-29"
+    },
+    {
+      "year": 2024,
+      "version": 253,
+      "generated": "2026-10-23"
+    },
+    {
+      "year": 2025,
+      "version": 72,
+      "generated": "2026-10-24"
+    }
+  ],
+  "ships": 26178,
+  "full_reports": 107180,
+  "sha256": "3d138c0d2b5b84ad65afa3ce36fd2eacf96bbdd17847955cff3faf30d8016204"
+}

@@ -11,7 +11,7 @@ from navigator.ui.state import AppState
 
 
 def _make(qtbot, path):
-    w = MainWindow(AppState(path))
+    w = MainWindow(AppState(path, bundle=False))
     qtbot.addWidget(w)
     return w
 
