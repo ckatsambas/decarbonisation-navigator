@@ -118,9 +118,14 @@ QComboBox QAbstractItemView {{ background: {p.panel}; border: 1px solid {p.borde
 
 QPushButton {{ background: {p.panel_alt}; border: 1px solid {p.border}; border-radius: 4px; padding: 6px 14px; }}
 QPushButton:hover {{ border-color: {p.muted}; }}
+QPushButton#Primary {{ background: {p.accent}; color: {p.accent_text}; border: none; font-weight: 600; padding: 7px 16px; }}
+QPushButton#Primary:hover {{ background: {p.text}; color: {p.bg}; }}
+QPushButton#Primary:disabled {{ background: {p.panel_alt}; color: {p.good}; border: 1px solid {p.border}; }}
 QPushButton#Segment {{ border-radius: 0; padding: 4px 12px; min-width: 34px; }}
 QPushButton#Segment:checked {{ background: {p.accent}; color: {p.accent_text}; border-color: {p.accent}; font-weight: 600; }}
 
+QTableView::item:selected, QTableWidget::item:selected {{ background: {p.accent}; color: {p.accent_text}; }}
+QSplitter::handle {{ background: transparent; width: 12px; }}
 QTableView, QTableWidget {{ background: {p.panel}; alternate-background-color: {p.panel_alt}; border: 1px solid {p.border};
   gridline-color: {p.grid}; border-radius: 4px; }}
 QHeaderView::section {{ background: {p.panel_alt}; color: {p.muted}; border: none; border-bottom: 1px solid {p.border};

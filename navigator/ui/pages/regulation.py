@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -30,10 +31,10 @@ from ..widgets import Kpi, Panel, TrLabel, amp
 from .base import Page
 
 YEARS = range(2024, 2051)
-SCOPES = ("intra_eu", "at_berth", "from_eu", "to_eu", "outside")
+SCOPES = ("intra_eu", "in_port", "from_eu", "to_eu", "outside")
 
 # Illustrative Kamsarmax trading partly with the EU (not a real ship)
-DEFAULTS = {"gt": 44_000, "intra_eu": 0, "at_berth": 1_000, "from_eu": 4_000, "to_eu": 3_000,
+DEFAULTS = {"gt": 44_000, "intra_eu": 0, "in_port": 1_000, "from_eu": 4_000, "to_eu": 3_000,
             "outside": 11_000, "ch4": 0.4, "n2o": 1.0, "p2025": 75, "p2030": 110, "p2050": 150}
 
 
@@ -72,9 +73,14 @@ class TrCombo(QComboBox):
 
 
 class EtsCalculator(QWidget):
-    def __init__(self):
+    def __init__(self, state=None):
         super().__init__()
         self.rules = EtsRules.load()
+        self.loaded = None                 # mrv.ShipYear the inputs came from, if any
+        self.loaded_em: AnnualEmissions | None = None   # its exact per-gas split, until the user edits
+        self.scope_override: bool | None = None
+        self.coverage_ratio: float | None = None
+        self._filling = False
         grid = QHBoxLayout(self)
         grid.setContentsMargins(0, 8, 0, 0)
         grid.setSpacing(16)
@@ -82,7 +88,17 @@ class EtsCalculator(QWidget):
         # ---------------------------------------------------------------- inputs
         left = QVBoxLayout()
         left.setSpacing(12)
-        self.f_rows: list[tuple[QFormLayout, int, str]] = []
+        self.source = Panel()
+        self.source_text = TrLabel("ets.from_mrv", "Muted", wrap=True, name="", imo="", year="")
+        self.source.body.addWidget(self.source_text)
+        self.ratio_text = TrLabel("ets.ratio", "Warning", wrap=True, pct="", until="")
+        self.ratio_text.hide()
+        self.source.body.addWidget(self.ratio_text)
+        self.reset_btn = QPushButton()
+        self.reset_btn.clicked.connect(self.reset_example)
+        self.source.body.addWidget(self.reset_btn, 0, Qt.AlignmentFlag.AlignLeft)
+        self.source.hide()
+        left.addWidget(self.source)
 
         ship = Panel("ets.panel.ship")
         f = self._form(ship)
@@ -162,10 +178,69 @@ class EtsCalculator(QWidget):
         right.addWidget(tp)
         grid.addLayout(right, 1)
 
-        for s in [self.gt, self.ch4, self.n2o, *self.scope.values(), *self.prices.values()]:
+        for s in [self.ch4, self.n2o, *self.scope.values()]:
+            s.valueChanged.connect(self._emissions_edited)
+        for s in self.prices.values():
             s.valueChanged.connect(self.recompute)
-        self.category.currentIndexChanged.connect(self.recompute)
+        self.gt.valueChanged.connect(self._ship_edited)
+        self.category.currentIndexChanged.connect(self._ship_edited)
         self.ice.currentIndexChanged.connect(self.recompute)
+        if state is not None:
+            state.ship_changed.connect(self.load_ship)
+        self.reset_btn.setText(tr("ets.reset"))
+        self.recompute()
+
+    # ------------------------------------------------------------------ inputs from EU MRV
+    def _emissions_edited(self) -> None:
+        if not self._filling:
+            self.loaded_em = None          # user changed figures: fall back to the proportional split
+            self.coverage_ratio = None     # the observed ratio belonged to the reported figures
+            self.ratio_text.hide()
+        self.recompute()
+
+    def _ship_edited(self) -> None:
+        if not self._filling:
+            self.scope_override = None     # user changed category/tonnage: apply the rules
+        self.recompute()
+
+    def _fill(self, values: dict, category, ice) -> None:
+        self._filling = True
+        try:
+            self.gt.setValue(values["gt"])
+            for k in SCOPES:
+                self.scope[k].setValue(values[k])
+            self.ch4.setValue(values["ch4"])
+            self.n2o.setValue(values["n2o"])
+            self.category.setCurrentIndex(max(0, self.category.findData(category)))
+            if ice and self.ice.findData(ice) < 0:
+                self.ice.items.append((ice, ice))
+                self.ice.addItem(ice, ice)
+            self.ice.setCurrentIndex(max(0, self.ice.findData(ice)))
+        finally:
+            self._filling = False
+
+    def load_ship(self, ship_year) -> None:
+        if ship_year is None:
+            return
+        em = ship_year.emissions()
+        ship = ship_year.to_ship()
+        vals = {"gt": ship.gross_tonnage, "ch4": em.ch4.total, "n2o": em.n2o.total}
+        vals.update({k: getattr(em.co2, k) for k in SCOPES})
+        self._fill(vals, ship.category, ship.ice_class)
+        self.loaded, self.loaded_em, self.scope_override = ship_year, em, ship.ets_scope_override
+        self.coverage_ratio = ship.ets_coverage_ratio
+        self.source_text.set_key("ets.from_mrv", name=ship.name, imo=ship.imo, year=ship_year.year)
+        if self.coverage_ratio is not None:
+            self.ratio_text.set_key("ets.ratio", pct=pct(min(max(self.coverage_ratio, 0), 1), 1),
+                                    until=self.rules.derogations_until)
+        self.ratio_text.setVisible(self.coverage_ratio is not None)
+        self.source.show()
+        self.recompute()
+
+    def reset_example(self) -> None:
+        self._fill(DEFAULTS, ShipCategory.CARGO, None)
+        self.loaded = self.loaded_em = self.scope_override = self.coverage_ratio = None
+        self.source.hide()
         self.recompute()
 
     # ------------------------------------------------------------------ helpers
@@ -183,9 +258,12 @@ class EtsCalculator(QWidget):
 
     def ship(self) -> Ship:
         return Ship(imo="", name="", ship_type="", category=self.category.currentData(),
-                    gross_tonnage=self.gt.value(), ice_class=self.ice.currentData())
+                    gross_tonnage=self.gt.value(), ice_class=self.ice.currentData(),
+                    ets_scope_override=self.scope_override, ets_coverage_ratio=self.coverage_ratio)
 
     def emissions(self) -> AnnualEmissions:
+        if self.loaded_em is not None:
+            return self.loaded_em
         co2 = ScopeSplit(**{k: s.value() for k, s in self.scope.items()})
         tot = co2.total or 1.0
         return AnnualEmissions(co2=co2, ch4=co2.scaled(self.ch4.value() / tot), n2o=co2.scaled(self.n2o.value() / tot))
@@ -219,6 +297,7 @@ class EtsCalculator(QWidget):
                 self.table.setItem(i, j, it)
 
     def retranslate(self) -> None:
+        self.reset_btn.setText(tr("ets.reset"))
         loc = ui_locale()
         for s in self.findChildren(QDoubleSpinBox):
             s.setLocale(loc)
@@ -280,17 +359,17 @@ class RegulationPage(Page):
     title_key = "reg.title"
     lede_key = "reg.lede"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, state=None):
+        super().__init__(state)
         self.tabs = QTabWidget()
-        self.ets = EtsCalculator()
+        self.ets = EtsCalculator(state)
         self.params = ParamsTable()
         self.fueleu = TrLabel("placeholder.phase", "Placeholder", n=1)
         self.nzf = TrLabel("placeholder.phase", "Placeholder", n=1)
         for w in (self.fueleu, self.nzf):
             w.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.tab_keys = ["reg.tab.ets", "reg.tab.fueleu", "reg.tab.nzf", "reg.tab.params"]
-        for w, k in zip((self.ets, self.fueleu, self.nzf, self.params), self.tab_keys):
+        for w, k in zip((self.ets, self.fueleu, self.nzf, self.params), self.tab_keys, strict=True):
             self.tabs.addTab(w, amp(tr(k)))
         self.lay.addWidget(self.tabs, 1)
 

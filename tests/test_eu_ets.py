@@ -10,7 +10,7 @@ KAMSARMAX = Ship(imo="9000001", name="Example Kamsarmax", ship_type="Bulk carrie
                  category=ShipCategory.CARGO, gross_tonnage=44_000)
 
 # 19,000 t CO2 a year: 1,000 at berth in EU ports, 4,000 leaving the EU, 3,000 arriving, rest elsewhere
-CO2 = ScopeSplit(intra_eu=0, at_berth=1_000, from_eu=4_000, to_eu=3_000, outside=11_000)
+CO2 = ScopeSplit(intra_eu=0, in_port=1_000, from_eu=4_000, to_eu=3_000, outside=11_000)
 EM = AnnualEmissions(co2=CO2)
 
 
@@ -35,7 +35,7 @@ def test_phase_in_steps():
 
 
 def test_methane_counts_only_from_2026():
-    em = AnnualEmissions(co2=CO2, ch4=ScopeSplit(at_berth=2.0))
+    em = AnnualEmissions(co2=CO2, ch4=ScopeSplit(in_port=2.0))
     r25 = ets_year(KAMSARMAX, em, 2025, 80.0, RULES)
     r26 = ets_year(KAMSARMAX, em, 2026, 80.0, RULES)
     assert r25.covered_by_gas[Gas.CH4] == 0
@@ -68,3 +68,13 @@ def test_cost_path_with_price_series_and_measure_starting_later():
     assert path[3].price == pytest.approx(85)             # 2027: 70 + 30 × 3/6
     assert path[3].allowances == pytest.approx(4_500 * 0.9)
     assert total_cost(path) == pytest.approx(sum(r.cost for r in path))
+
+
+def test_observed_coverage_ratio_applies_until_derogations_end():
+    ferry = Ship(imo="9000005", name="Island ferry", ship_type="Ro-pax ship", category=ShipCategory.PASSENGER,
+                 gross_tonnage=20_000, ets_coverage_ratio=0.01)
+    assert RULES.derogations_until == 2030
+    assert ets_year(ferry, EM, 2030, 80, RULES).covered == pytest.approx(4_500 * 0.01)
+    assert ets_year(ferry, EM, 2031, 80, RULES).covered == pytest.approx(4_500)
+    odd = Ship(imo="9000006", name="Odd", ship_type="Bulk carrier", gross_tonnage=20_000, ets_coverage_ratio=1.4)
+    assert ets_year(odd, EM, 2026, 80, RULES).coverage_ratio == 1.0     # never above the rule

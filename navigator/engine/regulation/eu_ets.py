@@ -37,6 +37,7 @@ class EtsRules:
     ice_share: float
     ice_until: int
     ice_classes: frozenset[str]
+    derogations_until: int
 
     @classmethod
     def from_params(cls, ps: _params.ParamSet) -> EtsRules:
@@ -52,6 +53,7 @@ class EtsRules:
             ice_share=float(ice["share"]),
             ice_until=int(ice["until"]),
             ice_classes=frozenset(c.lower() for c in ice["classes"]),
+            derogations_until=int(ps["derogations_until"]),
         )
 
     @classmethod
@@ -66,6 +68,10 @@ class EtsRules:
         return self.phase_in[max(steps)] if steps else 0.0
 
     def ship_in_scope(self, ship: Ship, year: int) -> bool:
+        if year < self.first_year:
+            return False
+        if ship.ets_scope_override is not None:
+            return ship.ets_scope_override
         start = self.categories_from.get(ship.category)
         return start is not None and year >= start and ship.gross_tonnage >= self.min_gross_tonnage
 
@@ -74,6 +80,13 @@ class EtsRules:
             return 1.0 - self.ice_share
         return 1.0
 
+    def coverage_ratio(self, ship: Ship, year: int) -> float:
+        """Observed share of rule-based emissions that EMSA counts, while route derogations last."""
+        r = ship.ets_coverage_ratio
+        if r is None or year > self.derogations_until:
+            return 1.0
+        return min(max(r, 0.0), 1.0)
+
 
 @dataclass(frozen=True)
 class EtsYear:
@@ -81,7 +94,8 @@ class EtsYear:
     surrender_year: int
     in_scope: bool
     covered_by_gas: dict[Gas, float]   # t CO2e after voyage coverage, before phase-in
-    covered: float                     # t CO2e
+    covered: float                     # t CO2e, after any observed derogation ratio
+    coverage_ratio: float              # 1.0 unless the ship's reported data show route derogations
     phase_in: float
     ice_factor: float
     allowances: float                  # EUAs to surrender
@@ -103,13 +117,15 @@ def covered_co2e(em: AnnualEmissions, year: int, rules: EtsRules) -> dict[Gas, f
 
 def ets_year(ship: Ship, em: AnnualEmissions, year: int, price: float, rules: EtsRules) -> EtsYear:
     in_scope = rules.ship_in_scope(ship, year)
+    ratio = rules.coverage_ratio(ship, year) if in_scope else 1.0
     by_gas = covered_co2e(em, year, rules) if in_scope else {g: 0.0 for g in Gas}
+    by_gas = {g: v * ratio for g, v in by_gas.items()}
     covered = sum(by_gas.values())
     share = rules.phase_in_share(year) if in_scope else 0.0
     ice = rules.ice_factor(ship, year) if in_scope else 1.0
     allowances = covered * share * ice
     return EtsYear(year=year, surrender_year=year + 1, in_scope=in_scope, covered_by_gas=by_gas,
-                   covered=covered, phase_in=share, ice_factor=ice, allowances=allowances,
+                   covered=covered, coverage_ratio=ratio, phase_in=share, ice_factor=ice, allowances=allowances,
                    price=price, cost=allowances * price)
 
 

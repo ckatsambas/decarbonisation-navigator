@@ -19,43 +19,90 @@
       "title": "IPCC Fifth Assessment Report (AR5), 100-year global warming potentials, as used in EU MRV/ETS reporting",
       "url": "https://www.ipcc.ch/report/ar5/wg1/",
       "checked": "2026-10-24"
+    },
+    "emsa_mrv_2024": {
+      "title": "EMSA THETIS-MRV public emission reports, reporting period 2024 (v253, generated 23/10/2026): CO2eq = CO2 + 28·CH4 + 265·N2O holds exactly for 12,976 of 12,976 ships reporting both gases",
+      "url": "https://mrv.emsa.europa.eu/#public/emission-report",
+      "checked": "2026-10-24"
     }
   },
   "values": {
     "first_year": {
-      "value": 2024, "source": "ec_faq",
+      "value": 2024,
+      "source": "ec_faq",
       "note": "First emission year covered. Allowances for year N are surrendered by 30 September of N+1."
     },
     "phase_in": {
-      "value": {"2024": 0.40, "2025": 0.70, "2026": 1.00}, "source": "ec_faq",
+      "value": {
+        "2024": 0.4,
+        "2025": 0.7,
+        "2026": 1.0
+      },
+      "source": "ec_faq",
       "note": "Share of verified emissions for which allowances must be surrendered, by emission year."
     },
     "coverage": {
-      "value": {"intra_eu": 1.0, "at_berth": 1.0, "from_eu": 0.5, "to_eu": 0.5, "outside": 0.0},
+      "value": {
+        "intra_eu": 1.0,
+        "in_port": 1.0,
+        "from_eu": 0.5,
+        "to_eu": 0.5,
+        "outside": 0.0
+      },
       "source": "ec_faq",
-      "note": "100% between EU ports and within EU ports; 50% on voyages between an EU and a non-EU port."
+      "note": "100% between EU ports and within EU ports (at berth and in-port movements); 50% on voyages between an EU and a non-EU port. Reproduces EMSA's reported ETS emissions exactly for 86.6% of ships in 2024; the rest are route-specific derogations not modelled here."
     },
     "gases_from": {
-      "value": {"co2": 2024, "ch4": 2026, "n2o": 2026}, "source": "ec_faq"
+      "value": {
+        "co2": 2024,
+        "ch4": 2026,
+        "n2o": 2026
+      },
+      "source": "ec_faq"
     },
     "gwp100": {
-      "value": {"co2": 1, "ch4": 28, "n2o": 265}, "source": "ipcc_ar5", "status": "verify",
-      "note": "AR5 GWP100 values used in EU greenhouse-gas reporting; confirm against the MRV implementing rules for shipping."
+      "value": {
+        "co2": 1,
+        "ch4": 28,
+        "n2o": 265
+      },
+      "source": "emsa_mrv_2024",
+      "note": "IPCC AR5 GWP100 values. Confirmed against the CO2eq figures EMSA publishes (see docs/decisions/0004)."
     },
     "min_gross_tonnage": {
-      "value": 5000, "source": "ec_faq"
+      "value": 5000,
+      "source": "ec_faq"
     },
     "categories_from": {
-      "value": {"cargo": 2024, "passenger": 2024, "offshore": 2027}, "source": "ec_faq",
+      "value": {
+        "cargo": 2024,
+        "passenger": 2024,
+        "offshore": 2027
+      },
+      "source": "ec_faq",
       "note": "Cargo and passenger ships from 2024; offshore ships of 5000 GT or more from 2027."
     },
     "ice_class_reduction": {
-      "value": {"share": 0.05, "until": 2030, "classes": ["IA", "IA Super"]}, "source": "ec_faq",
+      "value": {
+        "share": 0.05,
+        "until": 2030,
+        "classes": [
+          "IA",
+          "IA Super"
+        ]
+      },
+      "source": "ec_faq",
       "note": "Ice class IA, IA Super or equivalent may surrender 5% fewer allowances until 31 December 2030."
     },
     "surrender_deadline": {
-      "value": "09-30", "source": "ec_faq",
+      "value": "09-30",
+      "source": "ec_faq",
       "note": "Month-day in the year after the emission year."
+    },
+    "derogations_until": {
+      "value": 2030,
+      "source": "ec_faq",
+      "note": "Island and outermost-region derogations apply until 31 December 2030. When a ship's EMSA-reported ETS emissions are below the rule-based figure, the observed ratio is applied up to this year and full coverage afterwards (docs/decisions/0004)."
     }
   }
 }

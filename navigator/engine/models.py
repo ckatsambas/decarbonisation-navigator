@@ -4,16 +4,16 @@ from __future__ import annotations
 from bisect import bisect_right
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from enum import Enum
+from enum import StrEnum
 
 
-class Gas(str, Enum):
+class Gas(StrEnum):
     CO2 = "co2"
     CH4 = "ch4"
     N2O = "n2o"
 
 
-class ShipCategory(str, Enum):
+class ShipCategory(StrEnum):
     """Grouping used to decide which regimes apply (EU ETS scope differs by category)."""
     CARGO = "cargo"
     PASSENGER = "passenger"
@@ -30,7 +30,7 @@ class ScopeSplit:
     for IMO measures (CII, Net-Zero Framework).
     """
     intra_eu: float = 0.0   # voyages between two EU/EEA ports of call
-    at_berth: float = 0.0   # within EU/EEA ports (at berth and in-port movements)
+    in_port: float = 0.0    # within EU/EEA ports: at berth plus in-port movements
     from_eu: float = 0.0    # voyages departing an EU/EEA port to a non-EU port
     to_eu: float = 0.0      # voyages arriving at an EU/EEA port from a non-EU port
     outside: float = 0.0    # voyages with no EU/EEA port
@@ -69,6 +69,11 @@ class Ship:
     build_year: int | None = None
     flag: str = ""
     ice_class: str | None = None        # e.g. "IA", "IA Super"
+    # Known EU ETS status from reported data (EMSA publishes ETS emissions from 2024). None = use the rules.
+    ets_scope_override: bool | None = None
+    # EMSA-reported ETS emissions ÷ rule-based covered emissions in the latest reported year (0–1).
+    # Captures route-specific derogations (islands, outermost regions); applied until they expire.
+    ets_coverage_ratio: float | None = None
 
 
 class YearSeries:
@@ -102,4 +107,4 @@ class YearSeries:
         return self.at(year)
 
     def points(self) -> dict[int, float]:
-        return dict(zip(self._years, self._vals))
+        return dict(zip(self._years, self._vals, strict=True))
