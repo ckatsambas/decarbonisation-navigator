@@ -69,5 +69,6 @@ python tools/bundle_mrv.py data/mrv.sqlite                    # refresh the copy
 
 ## Builds
 
-Every push to `main` runs the tests. Pushing a version tag (for example `v0.1.0`) builds the
-Windows and macOS programs and attaches them to a GitHub Release.
+Every push to `main` runs the tests. Publishing a release on GitHub (Releases → Draft a new
+release → new tag such as `v0.1.0` on `main`) builds the Windows and macOS programs and attaches
+them to the release.

@@ -1,10 +1,16 @@
 name: Release builds
 
-# Push a tag such as v0.1.0 (or run manually) to build Windows and macOS programs.
+# Publish a release on GitHub (Releases → Draft a new release → new tag such as v0.1.0 on main)
+# to build the Windows and macOS programs and attach them to it. Running the workflow by hand
+# builds the programs as downloadable artifacts without a release.
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -55,3 +61,4 @@ jobs:
         with:
           files: DecarbonisationNavigator-*.zip
           generate_release_notes: true
+          fail_on_unmatched_files: true
