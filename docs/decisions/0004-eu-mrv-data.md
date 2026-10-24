@@ -14,8 +14,14 @@ used here are 2018 v275 to 2025 v72, generated between 6 February and 24 October
 
 1. **Local SQLite database, built by an importer** (`navigator/data/mrv.py`). Columns are matched
    by header text, not position, so EMSA can add or reorder columns. Each year stores its EMSA
-   version and generation date; a year is replaced only by a newer version. The raw files are
-   not committed to Git; the user imports them from a folder (in the app or from the command line).
+   version and generation date; a year is replaced only by a newer version.
+   **The database ships with the application** (`navigator/resources/mrv.sqlite.xz`, 11 MB,
+   built by `tools/bundle_mrv.py`, with a manifest of the EMSA releases it contains). On first
+   start it is unpacked to the user's data folder (about 0.6 s). A later version of the program
+   merges in only years whose bundled EMSA version is newer, so a user's own newer import is never
+   overwritten. Users can still import newer EMSA files themselves. The raw EMSA spreadsheets are
+   not committed. Source attribution (EMSA THETIS-MRV) is shown in the app; EMSA's reuse terms are
+   to be confirmed before the public release.
 2. **Partial reports are kept and combined when read.** They arise when a ship changes company
    during the year. Quantities are summed; intensity indicators are recomputed or left empty.
 3. **In-port emissions = the larger of "at berth" and "within ports".** In the 2024+ layout the

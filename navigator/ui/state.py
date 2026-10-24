@@ -12,11 +12,18 @@ class AppState(QObject):
     db_changed = Signal()
     ship_changed = Signal(object)          # mrv.ShipYear | None
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None, bundle: Path | None | bool = None):
+        """`bundle`: the packaged EU MRV database (default), another .xz file, or False for none."""
         super().__init__()
         self.db_path = Path(db_path) if db_path else mrv.default_db_path()
         self.db: mrv.MrvDatabase | None = None
         self.ship_year: mrv.ShipYear | None = None
+        self.bundle_status = "no-bundle"
+        if bundle is not False:
+            try:
+                self.bundle_status = mrv.ensure_database(self.db_path, bundle or None)
+            except Exception:  # noqa: BLE001 - a damaged bundle must not stop the app; import still works
+                self.bundle_status = "error"
         self.reopen()
 
     def reopen(self) -> None:

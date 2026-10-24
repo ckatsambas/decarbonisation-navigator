@@ -334,6 +334,73 @@ def import_files(paths: Iterable[Path], db: Path | None = None, *, force: bool =
     return results
 
 
+# ----------------------------------------------------------------------- bundled database
+RESOURCES = Path(__file__).resolve().parents[1] / "resources"
+
+
+def bundled_path() -> Path:
+    return RESOURCES / "mrv.sqlite.xz"
+
+
+def _bundle_releases(bundle: Path) -> dict[int, int]:
+    manifest = bundle.with_name("mrv_manifest.json")
+    if manifest.exists():
+        import json
+        return {r["year"]: r["version"] or 0 for r in json.loads(manifest.read_text(encoding="utf-8"))["releases"]}
+    return {}
+
+
+def _decompress(bundle: Path, target: Path) -> None:
+    import lzma
+    tmp = target.with_suffix(".part")
+    with lzma.open(bundle) as src, tmp.open("wb") as dst:
+        while chunk := src.read(1 << 20):
+            dst.write(chunk)
+    tmp.replace(target)
+
+
+def ensure_database(db: Path | None = None, bundle: Path | None = None) -> str:
+    """Make sure the user's database exists and holds at least the releases bundled with the app.
+
+    Returns "created" (first run), "updated" (newer bundled years merged in), "current" or "no-bundle".
+    Years the user imported in a newer EMSA version than the bundle are left untouched.
+    """
+    db = db or default_db_path()
+    bundle = bundle or bundled_path()
+    if not bundle.exists():
+        return "no-bundle"
+    if not db.exists():
+        db.parent.mkdir(parents=True, exist_ok=True)
+        _decompress(bundle, db)
+        return "created"
+    con = _connect(db)
+    try:
+        have = {y: v or 0 for y, v in con.execute("SELECT year, version FROM releases")}
+        wanted = _bundle_releases(bundle)
+        if wanted and all(have.get(y, -1) >= v for y, v in wanted.items()):
+            return "current"
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "bundle.sqlite"
+            _decompress(bundle, src)
+            con.execute("ATTACH DATABASE ? AS b", (str(src),))
+            cols = [r[1] for r in con.execute("PRAGMA table_info(reports)") if r[1] != "id"]
+            col_list = ", ".join(cols)
+            newer = [(y, v) for y, v in con.execute("SELECT year, version FROM b.releases")
+                     if have.get(y, -1) < (v or 0)]
+            with con:
+                for y, _ in newer:
+                    con.execute("DELETE FROM reports WHERE year = ?", (y,))
+                    con.execute(f"INSERT INTO reports ({col_list}) SELECT {col_list} FROM b.reports WHERE year = ?", (y,))
+                    con.execute("INSERT OR REPLACE INTO releases SELECT * FROM b.releases WHERE year = ?", (y,))
+                if newer:
+                    _rebuild_ships(con)
+            con.execute("DETACH DATABASE b")
+        return "updated" if newer else "current"
+    finally:
+        con.close()
+
+
 # ----------------------------------------------------------------------- reading the database
 PASSENGER_TYPES = {"passenger ship", "ro-pax ship", "passenger ship (cruise passenger ship)"}
 

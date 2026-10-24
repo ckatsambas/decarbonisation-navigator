@@ -29,7 +29,7 @@ decarbonisation-navigator = "navigator.__main__:main"
 include = ["navigator*"]
 
 [tool.setuptools.package-data]
-navigator = ["config/**/*.json", "i18n/*.json"]
+navigator = ["config/**/*.json", "i18n/*.json", "resources/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -54,13 +54,16 @@ python -m pytest
 
 ## EU MRV data
 
-Download the yearly files from THETIS-MRV (https://mrv.emsa.europa.eu → Emission reports) into
-one folder, then either use **Ship → Import EU MRV files…** in the app, or:
+The application ships with EMSA's public emission reports for 2018–2025 (26,178 ships), unpacked
+automatically on first start. To add a newer EMSA release, download the yearly files from
+THETIS-MRV (https://mrv.emsa.europa.eu → Emission reports) into one folder, then either use
+**Ship → Import EU MRV files…** in the app, or:
 
 ```
 python -m navigator.data.mrv build path/to/folder            # into the app's data folder
 python -m navigator.data.mrv build path/to/folder --db data/mrv.sqlite
 python tools/validate_ets.py data/mrv.sqlite                  # writes docs/validation/
+python tools/bundle_mrv.py data/mrv.sqlite                    # refresh the copy shipped with the app
 ```
 
 ## Builds
