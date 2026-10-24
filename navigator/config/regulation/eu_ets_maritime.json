@@ -1,0 +1,61 @@
+{
+  "name": "eu_ets_maritime",
+  "title": {
+    "el": "Σύστημα Εμπορίας Δικαιωμάτων Εκπομπών της ΕΕ (ναυτιλία)",
+    "en": "EU Emissions Trading System (maritime)"
+  },
+  "sources": {
+    "dir_2023_959": {
+      "title": "Directive (EU) 2023/959 amending Directive 2003/87/EC (EU ETS), maritime provisions",
+      "url": "https://eur-lex.europa.eu/eli/dir/2023/959/oj",
+      "checked": "2026-10-24"
+    },
+    "ec_faq": {
+      "title": "European Commission, FAQ – Maritime transport in EU Emissions Trading System (ETS)",
+      "url": "https://climate.ec.europa.eu/areas-action/transport-decarbonisation/reducing-emissions-shipping-sector/faq-maritime-transport-eu-emissions-trading-system-ets_en",
+      "checked": "2026-10-24"
+    },
+    "ipcc_ar5": {
+      "title": "IPCC Fifth Assessment Report (AR5), 100-year global warming potentials, as used in EU MRV/ETS reporting",
+      "url": "https://www.ipcc.ch/report/ar5/wg1/",
+      "checked": "2026-10-24"
+    }
+  },
+  "values": {
+    "first_year": {
+      "value": 2024, "source": "ec_faq",
+      "note": "First emission year covered. Allowances for year N are surrendered by 30 September of N+1."
+    },
+    "phase_in": {
+      "value": {"2024": 0.40, "2025": 0.70, "2026": 1.00}, "source": "ec_faq",
+      "note": "Share of verified emissions for which allowances must be surrendered, by emission year."
+    },
+    "coverage": {
+      "value": {"intra_eu": 1.0, "at_berth": 1.0, "from_eu": 0.5, "to_eu": 0.5, "outside": 0.0},
+      "source": "ec_faq",
+      "note": "100% between EU ports and within EU ports; 50% on voyages between an EU and a non-EU port."
+    },
+    "gases_from": {
+      "value": {"co2": 2024, "ch4": 2026, "n2o": 2026}, "source": "ec_faq"
+    },
+    "gwp100": {
+      "value": {"co2": 1, "ch4": 28, "n2o": 265}, "source": "ipcc_ar5", "status": "verify",
+      "note": "AR5 GWP100 values used in EU greenhouse-gas reporting; confirm against the MRV implementing rules for shipping."
+    },
+    "min_gross_tonnage": {
+      "value": 5000, "source": "ec_faq"
+    },
+    "categories_from": {
+      "value": {"cargo": 2024, "passenger": 2024, "offshore": 2027}, "source": "ec_faq",
+      "note": "Cargo and passenger ships from 2024; offshore ships of 5000 GT or more from 2027."
+    },
+    "ice_class_reduction": {
+      "value": {"share": 0.05, "until": 2030, "classes": ["IA", "IA Super"]}, "source": "ec_faq",
+      "note": "Ice class IA, IA Super or equivalent may surrender 5% fewer allowances until 31 December 2030."
+    },
+    "surrender_deadline": {
+      "value": "09-30", "source": "ec_faq",
+      "note": "Month-day in the year after the emission year."
+    }
+  }
+}
