@@ -26,11 +26,11 @@ def lang():
 
 def test_switch_and_format(lang):
     lang.set_language("en")
-    assert lang.tr("nav.ship") == "Ship"
+    assert lang.tr("step.1") == "Ship"
     assert lang.num(1234567.891, 2) == "1,234,567.89"
     assert lang.eur_short(2_500_000) == "€2.50m"
     lang.set_language("el")
-    assert lang.tr("nav.ship") == "Πλοίο"
+    assert lang.tr("step.1") == "Πλοίο"
     assert lang.num(1234567.891, 2) == "1.234.567,89"
     assert lang.num(-5, 0) == "−5"
     assert lang.pct(0.237) == "24%"

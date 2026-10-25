@@ -20,7 +20,7 @@ def main() -> int:
     lang = settings.value("language", i18n.DEFAULT)
     if lang in i18n.LANGUAGES:
         i18n.set_language(lang)
-    theme.set_current(theme.PALETTES.get(settings.value("theme", "dark"), theme.DEEP_SEA))
+    theme.set_current(theme.PALETTES.get(settings.value("theme", "light"), theme.DEFAULT))
     app.setStyleSheet(theme.stylesheet(theme.current()))
     win = MainWindow()
     win.show()
