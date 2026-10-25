@@ -16,6 +16,16 @@ reminds the author when an item becomes due. Tick items off with the commit that
 - [ ] Rerun the least-cost baseline (its NZF part) with the adopted rules (0008-4).
 - [ ] Replace the equal NZF odds in SMAA (`markets.json` nzf_probability) with the vote's actual outcome (0010).
 
+## Author's notes for the next session (25 Oct 2026), before Phase 5
+- [ ] Check on Windows that the step-3 shortlist checkboxes now work (fix in 00694a9; needs a new release).
+- [ ] Step 1 layout: the ship details box goes above the results table, laid out horizontally across the
+      width; the table below at full width so every column shows.
+- [ ] Step 4: a reset button (circular arrow) in every weighting section. The author is not fully happy with
+      the sliders or the step-4 layout but has no alternative yet: no change for now.
+- [ ] Charts: take inspiration from Financial Architect and from the figures in the IMO study (polar bars by
+      ship type, small-multiple trend panels, scatter/box comparisons); comparative heatmaps over all possible
+      options with our result highlighted in red; a few mini animations. To be discussed.
+
 ## When Phase 4 (MCDA + SMAA) starts
 - [x] Vectorise the engine with NumPy for tens of thousands of runs (0010: `mcda/smaa.py`, CII not needed).
 - [x] SMAA samples with common random numbers: EU share, every PERT input, prices, EUA path, NZF outcome,
