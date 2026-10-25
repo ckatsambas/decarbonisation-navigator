@@ -5,7 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
-from ..i18n import tr
+from ..i18n import num, tr
 
 
 def amp(text: str) -> str:
@@ -211,3 +211,12 @@ class ContourBackground(QWidget):
         qp.setFont(self.font())
         qp.drawText(QPointF(cx - 4, cy - r - 10), "N")
         qp.end()
+
+
+def size_label(c) -> str:
+    """'60.000–99.999 DWT' / '200,000+ DWT' for an IMO size class (language-aware separators)."""
+    lo, _, hi = c.size.partition("-")
+    unit = c.unit.upper() if c.unit != "cbm" else "m³"
+    if hi in ("+", ""):
+        return f"{num(float(lo))}+ {unit}"
+    return f"{num(float(lo))}–{num(float(hi))} {unit}"

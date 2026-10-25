@@ -13,6 +13,7 @@ reminds the author when an item becomes due. Tick items off with the commit that
 - [ ] Re-weight the NZF scenarios: the actual outcome becomes the default; keep the others only
       if still meaningful.
 - [ ] Rerun validation and the thesis case-study numbers; update thesis chapters 2 and 7.
+- [ ] Rerun the least-cost baseline (its NZF part) with the adopted rules (0008-4).
 
 ## When Phase 4 (MCDA + SMAA) starts
 - [ ] Vectorise the engine with NumPy (EU ETS, FuelEU, NZF, CII) for tens of thousands of runs
@@ -25,7 +26,11 @@ reminds the author when an item becomes due. Tick items off with the commit that
 - [ ] FuelEU pooling, banking and borrowing at fleet level (0005).
 
 ## Open data items
-- [ ] Replace provisional days at sea (`activity.json`, "to verify") with the Fourth IMO GHG Study
-      tables (Phase 2).
+- [x] Replace provisional days at sea with the Fourth IMO GHG Study tables (Phase 2, 0008).
+- [ ] Verify `individual_spread` (±25% days at sea) and the biofuel premium in `markets.json` (0008).
+- [ ] Tanker EU share is biased high (implied fuel 0.61–0.70 × class average); add a tanker
+      correction or wider range (0008-2).
+- [ ] Ship size for vehicle carriers and ro-ro rests on the type range only; find a GT signal
+      (e.g. lane metres or the EIV of ro-ro) (0008-1).
 - [ ] Confirm EMSA's reuse terms for the bundled EU MRV database before the public release (0004).
 - [ ] Code signing of the installers after the thesis (0001).

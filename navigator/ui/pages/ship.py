@@ -25,11 +25,13 @@ from PySide6.QtWidgets import (
 )
 
 from ...data import mrv
-from ...i18n import num, tr
+from ...engine import library as L
+from ...engine import reference as R
+from ...i18n import num, pick, tr
 from .. import theme
 from ..charts import StackedBarChart
 from ..state import AppState
-from ..widgets import Fold, Kpi, Panel, TrLabel, amp, label
+from ..widgets import Fold, Kpi, Panel, ReadMore, TrLabel, amp, label, size_label
 from .base import Page
 
 LIMIT = 500
@@ -290,6 +292,168 @@ class ShipDetail(QWidget):
         self.use_btn.style().polish(self.use_btn)
 
 
+# ============================================================================ standard ships
+class StandardPane(QWidget):
+    """Pick a standard ship: a named preset or any IMO type × size class, plus a trading pattern."""
+
+    def __init__(self, state: AppState):
+        from PySide6.QtWidgets import QButtonGroup
+
+        from .position import Choice
+        super().__init__()
+        self.state = state
+        self.key: str | None = None
+        self.capacity: float | None = None
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(14)
+        v.addWidget(TrLabel("std.presets", "SectionTitle"))
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(10)
+        self.group = QButtonGroup(self)
+        self.preset_buttons: dict[str, QPushButton] = {}
+        for i, pr in enumerate(L.PRESETS):
+            b = QPushButton()
+            b.setObjectName("Preset")
+            b.setCheckable(True)
+            b.clicked.connect(lambda _=False, k=pr.key: self.pick_preset(k))
+            self.group.addButton(b)
+            grid.addWidget(b, i // 4, i % 4)
+            self.preset_buttons[pr.key] = b
+        v.addLayout(grid)
+        row = QHBoxLayout()
+        row.addWidget(TrLabel("std.any", "Muted"))
+        self.type_box = QComboBox()
+        self.class_box = QComboBox()
+        self.class_box.setMinimumWidth(220)
+        row.addWidget(self.type_box)
+        row.addWidget(self.class_box)
+        row.addStretch(1)
+        v.addLayout(row)
+        v.addWidget(TrLabel("std.pattern", "SectionTitle"))
+        self.pattern = Choice([("deep_sea", "std.pattern.deep_sea"), ("mixed", "std.pattern.mixed"),
+                               ("short_sea", "std.pattern.short_sea")])
+        v.addWidget(self.pattern, 0, Qt.AlignmentFlag.AlignLeft)
+        v.addWidget(ReadMore("std.pattern.more"))
+        self.card = Panel()
+        top = QHBoxLayout()
+        self.title = label("", "PageTitle")
+        self.title.setWordWrap(True)
+        top.addWidget(self.title, 1)
+        self.use_btn = QPushButton()
+        self.use_btn.setObjectName("Primary")
+        self.use_btn.clicked.connect(self._use)
+        top.addWidget(self.use_btn, 0, Qt.AlignmentFlag.AlignTop)
+        self.card.body.addLayout(top)
+        kg = QGridLayout()
+        kg.setHorizontalSpacing(24)
+        self.k = {key: Kpi(f"std.kpi.{key}") for key in ("dwt", "power", "speed", "days", "fuel")}
+        for i, w in enumerate(self.k.values()):
+            kg.addWidget(w, 0, i)
+            kg.setColumnStretch(i, 1)
+        self.card.body.addLayout(kg)
+        self.card.body.addWidget(TrLabel("std.note", "Faint", wrap=True))
+        v.addWidget(self.card)
+        v.addStretch(1)
+        self.pattern.picked.connect(lambda _: self._refresh())
+        self.type_box.currentIndexChanged.connect(self._fill_classes)
+        self.class_box.activated.connect(lambda _: self.pick_class(self.class_box.currentData()))
+        state.standard_changed.connect(lambda _: self._update_button())
+        state.ship_changed.connect(lambda _: self._update_button())
+        self.retranslate()
+        self.pick_preset("kamsarmax")
+
+    def _fill_classes(self) -> None:
+        t = self.type_box.currentData()
+        self.class_box.blockSignals(True)
+        self.class_box.clear()
+        for c in L.library_classes():
+            if c.type == t:
+                self.class_box.addItem(size_label(c), c.key)
+        self.class_box.blockSignals(False)
+
+    def pick_preset(self, key: str) -> None:
+        pr = L.preset(key)
+        self.preset_buttons[key].setChecked(True)
+        self.key, self.capacity, self.name = pr.cls, pr.capacity or None, pick(pr.name)
+        self._sync_boxes()
+        self._refresh()
+
+    def pick_class(self, key: str | None) -> None:
+        if not key:
+            return
+        self.group.setExclusive(False)
+        for b in self.preset_buttons.values():
+            b.setChecked(False)
+        self.group.setExclusive(True)
+        c = R.by_key(key)
+        self.key, self.capacity, self.name = key, None, f"{c.label} {size_label(c)}"
+        self._refresh()
+
+    def _sync_boxes(self) -> None:
+        c = R.by_key(self.key)
+        self.type_box.blockSignals(True)
+        self.type_box.setCurrentIndex(max(self.type_box.findData(c.type), 0))
+        self.type_box.blockSignals(False)
+        self._fill_classes()
+        self.class_box.setCurrentIndex(max(self.class_box.findData(c.key), 0))
+
+    def selection(self) -> tuple:
+        c = R.by_key(self.key)
+        pattern = self.pattern_value or L.DEFAULT_PATTERN.get(c.type, "deep_sea")
+        return (self.key, pattern, self.capacity)
+
+    @property
+    def pattern_value(self) -> str | None:
+        return next((k for k, b in self.pattern.buttons.items() if b.isChecked()), None)
+
+    def _refresh(self) -> None:
+        c = R.by_key(self.key)
+        if self.pattern_value is None:
+            self.pattern.set_value(L.DEFAULT_PATTERN.get(c.type, "deep_sea"))
+        self.title.setText(self.name)
+        cap = self.capacity or L.default_capacity(c, L.cii_type_of(c))
+        unit = "GT" if L.cii_type_of(c) in ("vehicle", "roro", "ropax", "cruise") else "DWT"
+        self.k["dwt"].caption.set_key("std.kpi.cap", unit=unit)
+        self.k["dwt"].value.setText(num(cap) if cap else "–")
+        self.k["power"].value.setText(num(c.value("power_kw")))
+        self.k["speed"].value.setText(num(c.value("speed_at_sea"), 1))
+        self.k["days"].value.setText(num(c.value("days_at_sea")))
+        self.k["fuel"].value.setText(num(c.fuel_t()))
+        self._update_button()
+
+    def _use(self) -> None:
+        self.state.use_standard(self.selection())
+
+    def _update_button(self) -> None:
+        cur = self.state.standard
+        active = bool(cur and self.key and tuple(cur) == self.selection())
+        self.use_btn.setText(amp(tr("ship.in_use" if active else "ship.use")))
+        self.use_btn.setObjectName("Chosen" if active else "Primary")
+        self.use_btn.style().unpolish(self.use_btn)
+        self.use_btn.style().polish(self.use_btn)
+
+    def retranslate(self) -> None:
+        for pr in L.PRESETS:
+            c = R.by_key(pr.cls)
+            self.preset_buttons[pr.key].setText(f"{pick(pr.name)}\n{size_label(c)}")
+        cur = self.type_box.currentData()
+        self.type_box.blockSignals(True)
+        self.type_box.clear()
+        for t in L.LIBRARY_TYPES:
+            if any(c.type == t for c in L.library_classes()):
+                self.type_box.addItem(tr(f"std.type.{t}"), t)
+        self.type_box.setCurrentIndex(max(self.type_box.findData(cur), 0))
+        self.type_box.blockSignals(False)
+        self.pattern.retranslate()
+        if self.key:
+            pr = next((p for p in L.PRESETS if p.cls == self.key and (p.capacity or None) == self.capacity), None)
+            if pr:
+                self.name = pick(pr.name)
+            self._refresh()
+
+
 # ============================================================================ step page
 class StepShip(Page):
     title_key = "step.ship.q"
@@ -297,7 +461,15 @@ class StepShip(Page):
     title_style = ("Question", "QuestionLede")
 
     def __init__(self, state: AppState):
+        from .position import Choice
         super().__init__(state)
+        self.mode = Choice([("mrv", "std.mode.mrv"), ("standard", "std.mode.standard")])
+        self.mode.set_value("mrv")
+        self.lay.addWidget(self.mode, 0, Qt.AlignmentFlag.AlignLeft)
+        self.mrv_pane = QWidget()
+        mv = QVBoxLayout(self.mrv_pane)
+        mv.setContentsMargins(0, 0, 0, 0)
+        mv.setSpacing(16)
         bar = QHBoxLayout()
         bar.setSpacing(12)
         self.search = QLineEdit()
@@ -310,12 +482,12 @@ class StepShip(Page):
         bar.addWidget(self.type_box, 1)
         self.count = label("", "Muted")
         bar.addWidget(self.count)
-        self.lay.addLayout(bar)
+        mv.addLayout(bar)
 
         self.empty = Panel()
         self.empty.body.addWidget(TrLabel("ship.no_data.title", "PanelTitle"))
         self.empty.body.addWidget(TrLabel("ship.no_data.body", "Muted", wrap=True))
-        self.lay.addWidget(self.empty)
+        mv.addWidget(self.empty)
 
         self.split = QSplitter(Qt.Orientation.Horizontal)
         self.model = ResultsModel()
@@ -341,7 +513,12 @@ class StepShip(Page):
         self.split.setStretchFactor(0, 2)
         self.split.setStretchFactor(1, 3)
         self.split.setMinimumHeight(560)
-        self.lay.addWidget(self.split, 1)
+        mv.addWidget(self.split, 1)
+        self.lay.addWidget(self.mrv_pane, 1)
+        self.std_pane = StandardPane(state)
+        self.std_pane.hide()
+        self.lay.addWidget(self.std_pane, 1)
+        self.mode.picked.connect(self.set_mode)
 
         self._timer = QTimer(self, singleShot=True, interval=200)
         self._timer.timeout.connect(self.run_search)
@@ -350,6 +527,11 @@ class StepShip(Page):
         state.db_changed.connect(self.on_db)
         self.on_db()
         self.on_language()
+
+    def set_mode(self, mode: str) -> None:
+        self.mode.set_value(mode)
+        self.mrv_pane.setVisible(mode == "mrv")
+        self.std_pane.setVisible(mode == "standard")
 
     def on_db(self) -> None:
         db = self.state.db
@@ -391,6 +573,8 @@ class StepShip(Page):
             self.detail.show_ship(self.model.rows[current.row()].imo)
 
     def on_language(self) -> None:
+        self.mode.retranslate()
+        self.std_pane.retranslate()
         self.search.setPlaceholderText(tr("ship.search.placeholder"))
         if self.type_box.count():
             self.type_box.setItemText(0, tr("ship.type.all"))

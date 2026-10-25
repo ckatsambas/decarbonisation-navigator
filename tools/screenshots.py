@@ -41,7 +41,6 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
         pv.ship_step.show_imo(q)
         pv.ship_step.detail.use_btn.click()
         pv.next_btn.click()
-        pv.position_step.capacity.setValue(82_000 if q == imo else 0)
         pv.position_step.recompute()
         app.processEvents()
         pv.save_now()
@@ -55,9 +54,14 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     w.grab().save(str(out / f"step1-{lang}-{pal.name}.png"))
     pv.ship_step.detail.use_btn.click()
     pv.next_btn.click()
-    pv.position_step.capacity.setValue(82_000)
     pv.position_step.recompute()
     app.processEvents()
     w.grab().save(str(out / f"step2-{lang}-{pal.name}.png"))
+    w.new_project()                                   # a standard ship from the library
+    pv = w.project_view
+    pv.ship_step.set_mode("standard")
+    pv.ship_step.std_pane.pick_preset("kamsarmax")
+    app.processEvents()
+    w.grab().save(str(out / f"step1-standard-{lang}-{pal.name}.png"))
     w.close()
 print("saved to", out)

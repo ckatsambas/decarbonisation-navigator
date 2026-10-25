@@ -94,12 +94,15 @@ def test_cii_reference_and_rating():
 
 def test_eu_share_estimate():
     rules = ActivityRules.load()
-    days = rules.sea_days["Bulk carrier"]
-    s = estimate_share("Bulk carrier", days * 24 * 0.25, rules)
+    from navigator.engine import reference as R
+    cls = R.class_for("bulk", dwt=82_000)
+    days = cls.value("days_at_sea")
+    s = estimate_share("Bulk carrier", days * 24 * 0.25, 82_000, "dwt", rules=rules)
     assert s.method == "estimated" and s.share == pytest.approx(0.25)
+    assert s.size_class == "bulk:60000-99999"
     assert s.low < s.share < s.high
-    assert estimate_share("Ro-pax ship", 9000, rules).eu_dominant
-    assert estimate_share("Bulk carrier", None, rules).method == "unknown"
+    assert estimate_share("Ro-pax ship", 8000, 25_000, "gt", rules=rules).eu_dominant
+    assert estimate_share("Bulk carrier", None, rules=rules).method == "unknown"
     ww = to_worldwide(EM, 0.25)
     assert ww.co2.total == pytest.approx(EM.co2.total * 4) and ww.co2.intra_eu == EM.co2.intra_eu
 
@@ -107,8 +110,8 @@ def test_eu_share_estimate():
 def test_evaluate_views():
     profile = Profile(ship=SHIP, emissions=EM, fuel_mix={"hfo": 1}, cii_type="bulk", capacity=82_000,
                       distance_nm=40_000, eu_share=user_share(0.25))
-    eu = evaluate(profile, Scenario(eua=YearSeries.constant(80), view="eu"))
-    ww = evaluate(profile, Scenario(eua=YearSeries.constant(80), view="ww"))
+    eu = evaluate(profile, Scenario(eua=YearSeries.constant(80), view="eu", baseline="pay"))
+    ww = evaluate(profile, Scenario(eua=YearSeries.constant(80), view="ww", baseline="pay"))
     r_eu, r_ww = eu[2030 - 2024], ww[2030 - 2024]
     assert r_eu.ets.cost == r_ww.ets.cost and r_eu.fueleu.penalty == r_ww.fueleu.penalty   # EU regimes unchanged
     assert r_ww.nzf.cost_eur == pytest.approx(4 * r_eu.nzf.cost_eur, rel=1e-9)            # IMO on worldwide activity
@@ -120,3 +123,23 @@ def test_evaluate_views():
 def test_rules_bundle_loads():
     r = Rules.load()
     assert r.fueleu.target(2030) == pytest.approx(91.16 * 0.94)
+
+
+def test_least_cost_baseline_never_costs_more_and_picks_cheapest():
+    profile = Profile(ship=SHIP, emissions=EM, fuel_mix={"hfo": 1}, eu_share=user_share(0.5))
+    sc = Scenario(eua=YearSeries.constant(80), view="ww")
+    pay = evaluate(profile, sc.__class__(**{**sc.__dict__, "baseline": "pay"}))
+    lc = evaluate(profile, sc)
+    for a, b in zip(pay, lc, strict=True):
+        assert b.total_eur <= a.total_eur + 1e-6
+    y = next(r for r in lc if r.year == 2035)
+    assert y.route in ("pool", "bio")
+    if y.route == "bio":
+        assert 0 < y.bio_share < 1 and y.ets.cost < next(r for r in pay if r.year == 2035).ets.cost
+    # forcing a very high pool price and biofuel premium leaves only the penalty
+    dear = evaluate(profile, sc.__class__(**{**sc.__dict__, "pool_price": 1e6, "bio_premium_usd": 1e6}))
+    assert {r.route for r in dear if r.fueleu.penalty > 0} == {"pay"}
+    # cheap pool surplus: pooling chosen and cost = deficit × price
+    cheap = evaluate(profile, sc.__class__(**{**sc.__dict__, "pool_price": 1.0, "bio_premium_usd": 1e6}))
+    r = next(r for r in cheap if r.year == 2030)
+    assert r.route == "pool" and r.fueleu_cost == pytest.approx(-r.fueleu.balance_t * 1.0)

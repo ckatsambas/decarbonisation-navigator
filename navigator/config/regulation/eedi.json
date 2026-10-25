@@ -1,0 +1,110 @@
+{
+  "name": "eedi",
+  "title": {
+    "el": "Γραμμές αναφοράς EEDI",
+    "en": "EEDI reference lines"
+  },
+  "sources": {
+    "irs_eedi": {
+      "title": "Indian Register of Shipping, Energy Efficiency Design Index: reference line parameters and reduction factors (MARPOL Annex VI, Reg. 24)",
+      "url": "https://irclass.org/media/2368/energy-efficiency-design-index.pdf",
+      "checked": "2026-10-25"
+    },
+    "assume": {
+      "title": "Modelling assumption of this application; documented in docs/decisions/0008",
+      "checked": "2026-10-25"
+    }
+  },
+  "values": {
+    "reference_lines": {
+      "value": {
+        "bulk": {
+          "a": 961.79,
+          "c": 0.477,
+          "capacity": "dwt"
+        },
+        "gas": {
+          "a": 1120.0,
+          "c": 0.456,
+          "capacity": "dwt"
+        },
+        "tanker": {
+          "a": 1218.8,
+          "c": 0.488,
+          "capacity": "dwt"
+        },
+        "container": {
+          "a": 174.22,
+          "c": 0.201,
+          "capacity": "dwt"
+        },
+        "general_cargo": {
+          "a": 107.48,
+          "c": 0.216,
+          "capacity": "dwt"
+        },
+        "reefer": {
+          "a": 227.01,
+          "c": 0.244,
+          "capacity": "dwt"
+        },
+        "combination": {
+          "a": 1219.0,
+          "c": 0.488,
+          "capacity": "dwt"
+        },
+        "roro": {
+          "a": 1405.15,
+          "c": 0.498,
+          "capacity": "dwt"
+        },
+        "ropax": {
+          "a": 752.16,
+          "c": 0.381,
+          "capacity": "dwt"
+        },
+        "lng": {
+          "a": 2253.7,
+          "c": 0.474,
+          "capacity": "dwt"
+        },
+        "cruise": {
+          "a": 170.84,
+          "c": 0.214,
+          "capacity": "gt"
+        }
+      },
+      "source": "irs_eedi",
+      "status": "verify",
+      "note": "Reference line = a · capacity^(−c). Taken from a classification-society summary of MARPOL Annex VI; confirm against the regulation text."
+    },
+    "reduction_by_index": {
+      "value": {
+        "EEDI": "phase",
+        "EEXI": "phase",
+        "EIV": [
+          -0.25,
+          0.0,
+          0.25
+        ]
+      },
+      "source": "assume",
+      "status": "verify",
+      "note": "Attained index ≈ reference × (1 − X). EEDI/EEXI: X between 0 and the type's phase-3 / EEXI maximum (build year unknown), centred halfway. EIV: the reference lines were fitted to EIV values, so X is centred on 0 with ±25% scatter."
+    },
+    "max_reduction": {
+      "value": {
+        "container": 0.5,
+        "default": 0.3
+      },
+      "source": "irs_eedi",
+      "status": "verify",
+      "note": "Phase-3 EEDI reduction: 30% for most types; up to 50% for the largest container ships (EEXI likewise)."
+    },
+    "min_slope": {
+      "value": 0.3,
+      "source": "assume",
+      "note": "The index is used only where the reference-line exponent c ≥ 0.30 (bulk, gas, tanker, LNG, combination, ro-ro); for container, general cargo, reefer and cruise ships the line is too flat to identify size."
+    }
+  }
+}

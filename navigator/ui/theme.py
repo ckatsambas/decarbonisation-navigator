@@ -188,6 +188,8 @@ QPushButton#Segment {{ border-radius: 0; padding: 4px 12px; min-width: 34px; }}
 QPushButton#Segment:checked {{ background: {p.accent}; color: {p.accent_text}; border-color: {p.accent}; font-weight: 600; }}
 QPushButton#SegmentSmall {{ border-radius: 0; padding: 3px 9px; font-size: 8pt; min-width: 26px; }}
 QPushButton#SegmentSmall:checked {{ background: {p.shallow}; color: {p.accent}; border-color: {p.accent}; font-weight: 700; }}
+QPushButton#Preset {{ text-align: left; padding: 10px 12px; border-radius: 8px; background: {p.panel}; font-size: 9.5pt; }}
+QPushButton#Preset:checked {{ border: 2px solid {p.accent}; background: {p.shallow}; color: {p.text}; font-weight: 600; }}
 QPushButton#Choice {{ border-radius: 0; padding: 8px 16px; }}
 QPushButton#Choice:checked {{ background: {p.accent}; color: {p.accent_text}; border-color: {p.accent}; }}
 

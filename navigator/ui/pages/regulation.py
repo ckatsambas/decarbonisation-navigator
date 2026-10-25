@@ -26,8 +26,10 @@ from PySide6.QtWidgets import (
 )
 
 from ...engine import fuels as F
+from ...engine import library as L
 from ...engine import params as P
-from ...engine.compliance import YEARS, Profile, Rules, Scenario, YearResult
+from ...engine import reference as R
+from ...engine.compliance import BASELINES, YEARS, Profile, Rules, Scenario, YearResult
 from ...engine.estimate import EuShare, user_share
 from ...engine.models import AnnualEmissions, ScopeSplit, Ship, ShipCategory, YearSeries
 from ...engine.regulation.cii import MRV_TO_CII
@@ -35,7 +37,7 @@ from ...engine.regulation.imo_nzf import SCENARIOS
 from ...i18n import eur_short, language, num, pct, pick, tr
 from .. import theme
 from ..charts import BarChart, StackedBarChart
-from ..widgets import Kpi, Panel, ReadMore, TrLabel, amp
+from ..widgets import Kpi, Panel, ReadMore, TrLabel, amp, size_label
 
 EU_SCOPES = ("intra_eu", "in_port", "from_eu", "to_eu")
 CII_TYPES = sorted(set(MRV_TO_CII.values()))
@@ -125,6 +127,8 @@ class Inputs(QWidget):
         self.scope_override: bool | None = None
         self.coverage_ratio: float | None = None
         self.share_estimate: EuShare | None = None
+        self.size_estimate = None                      # Estimate of capacity (from MRV data)
+        self.standard = None                           # (class key, pattern, capacity) for a library ship
         self._filling = False
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
@@ -201,7 +205,7 @@ class Inputs(QWidget):
         self._row(f, "in.eu_share", self.eu_share)
         self.ww_method = TrLabel("ww.method.user", "Estimate", wrap=True)
         self.ww.body.addWidget(self.ww_method)
-        self.ww_more = ReadMore("ww.more", hours="", days="", share="", low="", high="")
+        self.ww_more = ReadMore("ww.more", hours="", cls="", days="", dlo="", dhi="", share="", low="", high="", ratio="")
         self.ww.body.addWidget(self.ww_more)
         v.addWidget(self.ww)
 
@@ -213,6 +217,8 @@ class Inputs(QWidget):
             f.addRow(f"EUA {y} (€/t)", s)
         self.nzf = TrCombo([(f"nzf.{s}", s) for s in SCENARIOS])
         self._row(f, "in.nzf", self.nzf)
+        self.baseline = TrCombo([(f"base.{b}", b) for b in BASELINES])
+        self._row(f, "in.baseline", self.baseline)
         sc.body.addWidget(TrLabel("ets.price_hint", "Faint", wrap=True))
         sc.body.addWidget(ReadMore("in.nzf.more"))
         v.addWidget(sc)
@@ -224,12 +230,13 @@ class Inputs(QWidget):
         self._timer.timeout.connect(self.changed.emit)
         for s in [self.ch4, self.n2o, *self.scope.values()]:
             s.valueChanged.connect(self._emissions_edited)
-        for s in [self.capacity, self.distance, self.share1, *self.prices.values()]:
+        for s in [self.distance, self.share1, *self.prices.values()]:
             s.valueChanged.connect(self._poke)
+        self.capacity.valueChanged.connect(self._capacity_edited)
         self.eu_share.valueChanged.connect(self._share_edited)
         self.gt.valueChanged.connect(self._ship_edited)
         self.category.currentIndexChanged.connect(self._ship_edited)
-        for c in (self.ice, self.nzf, self.fuel1, self.fuel2):
+        for c in (self.ice, self.nzf, self.fuel1, self.fuel2, self.baseline):
             c.currentIndexChanged.connect(self._poke)
         self.cii_type.currentIndexChanged.connect(self._cii_type_changed)
         self.domestic.toggled.connect(self._poke)
@@ -261,6 +268,11 @@ class Inputs(QWidget):
     def _ship_edited(self) -> None:
         if not self._filling:
             self.scope_override = None
+        self._poke()
+
+    def _capacity_edited(self) -> None:
+        if not self._filling:
+            self.size_estimate = None          # the user's own value replaces the estimate
         self._poke()
 
     def _share_edited(self) -> None:
@@ -308,7 +320,7 @@ class Inputs(QWidget):
 
     def scenario(self, view: str) -> Scenario:
         return Scenario(eua=YearSeries({y: s.value() for y, s in self.prices.items()}),
-                        nzf=self.nzf.currentData(), view=view)
+                        nzf=self.nzf.currentData(), view=view, baseline=self.baseline.currentData())
 
     # ------------------------------------------------------------------ from EU MRV
     def _fill(self, vals: dict, category, ice, fuel_mix: F.FuelMix, cii_type, domestic: bool) -> None:
@@ -337,18 +349,40 @@ class Inputs(QWidget):
             self._filling = False
         self._cii_type_changed()
 
+    def _load_profile(self, p: Profile) -> None:
+        em = p.emissions
+        vals = {"gt": p.ship.gross_tonnage, "ch4": em.ch4.total, "n2o": em.n2o.total, "capacity": p.capacity or 0,
+                "distance": p.distance_nm, "eu_share": round(p.eu_share.share * 100) if p.eu_share else 100}
+        vals.update({k: getattr(em.co2, k) for k in EU_SCOPES})
+        self._fill(vals, p.ship.category, p.ship.ice_class, p.fuel_mix, p.cii_type, p.domestic_only)
+        self.loaded_em = em
+        self.scope_override, self.coverage_ratio = p.ship.ets_scope_override, p.ship.ets_coverage_ratio
+        self.share_estimate = p.eu_share
+        self.size_estimate = p.size
+
+    def load_standard(self, std) -> None:
+        """A standard ship from the library: (class key, trading pattern, capacity or None)."""
+        if std is None:
+            return
+        key, pattern, capacity = std
+        c = R.by_key(key)
+        self._load_profile(L.profile(c, pattern, capacity))
+        self.loaded, self.standard = None, std
+        self.share_estimate = None                     # the pattern's share is the user's value (method a)
+        self.size_estimate = None
+        self.source_text.set_key("std.source", name=c.label, size=size_label(c), unit="")
+        self.ratio_text.hide()
+        self.fuel_more.hide()
+        self.source.show()
+        self._show_share_method()
+        self.changed.emit()
+
     def load_ship(self, ship_year) -> None:
         if ship_year is None:
             return
         p = ship_year.profile()
-        em = p.emissions
-        vals = {"gt": p.ship.gross_tonnage, "ch4": em.ch4.total, "n2o": em.n2o.total, "capacity": 0,
-                "distance": p.distance_nm, "eu_share": round(p.eu_share.share * 100)}
-        vals.update({k: getattr(em.co2, k) for k in EU_SCOPES})
-        self._fill(vals, p.ship.category, p.ship.ice_class, p.fuel_mix, p.cii_type, p.domestic_only)
-        self.loaded, self.loaded_em = ship_year, em
-        self.scope_override, self.coverage_ratio = p.ship.ets_scope_override, p.ship.ets_coverage_ratio
-        self.share_estimate = p.eu_share
+        self._load_profile(p)
+        self.loaded, self.standard = ship_year, None
         self.source_text.set_key("ets.from_mrv", name=p.ship.name, imo=p.ship.imo, year=ship_year.year)
         if self.coverage_ratio is not None:
             self.ratio_text.set_key("ets.ratio", pct=pct(min(max(self.coverage_ratio, 0), 1), 1),
@@ -366,6 +400,7 @@ class Inputs(QWidget):
     def reset_example(self) -> None:
         self._fill(DEFAULTS, ShipCategory.CARGO, None, {"hfo": 1.0}, "bulk", False)
         self.loaded = self.loaded_em = self.scope_override = self.coverage_ratio = self.share_estimate = None
+        self.size_estimate = self.standard = None
         self.source.hide()
         self.fuel_more.hide()
         self._show_share_method()
@@ -375,14 +410,19 @@ class Inputs(QWidget):
         e = self.share_estimate
         method = e.method if e is not None else "user"
         self.ww_method.set_key(f"ww.method.{method}")
-        self.ww_more.setVisible(e is not None and e.sea_days is not None and e.mrv_hours is not None)
-        if e is not None and e.sea_days and e.mrv_hours:
-            self.ww_more.set_key("ww.more", hours=num(e.mrv_hours), days=num(e.sea_days),
-                                 share=pct(min(e.mrv_hours / (e.sea_days * 24), 1.0)), low=pct(e.low), high=pct(e.high))
+        show = e is not None and e.sea_days is not None and e.mrv_hours is not None and e.days is not None
+        self.ww_more.setVisible(show)
+        if show:
+            c = R.by_key(e.size_class)
+            fr = e.fuel_ratio
+            self.ww_more.set_key("ww.more", hours=num(e.mrv_hours), cls=f"{c.label} {size_label(c)}",
+                                 days=num(e.sea_days), dlo=num(e.days.low), dhi=num(e.days.high),
+                                 share=pct(e.share), low=pct(e.low), high=pct(e.high),
+                                 ratio=num(fr, 2) if fr else "–")
 
     # ------------------------------------------------------------------ save / restore
     SPINS = ("gt", "capacity", "distance", "ch4", "n2o", "share1", "eu_share")
-    COMBOS = ("category", "ice", "cii_type", "fuel1", "fuel2", "nzf")
+    COMBOS = ("category", "ice", "cii_type", "fuel1", "fuel2", "nzf", "baseline")
 
     def snapshot(self) -> dict:
         d = {k: getattr(self, k).value() for k in self.SPINS}
@@ -391,8 +431,10 @@ class Inputs(QWidget):
         d.update({f"eua_{y}": s.value() for y, s in self.prices.items()})
         d["domestic"] = self.domestic.isChecked()
         d["ship"] = {"imo": self.loaded.imo, "year": self.loaded.year} if self.loaded else None
+        d["standard"] = list(self.standard) if self.standard else None
         d["em_from_mrv"] = self.loaded_em is not None
         d["share_from_estimate"] = self.share_estimate is not None
+        d["size_from_estimate"] = self.size_estimate is not None
         d["scope_override"] = self.scope_override
         d["coverage_ratio"] = self.coverage_ratio
         return d
@@ -402,7 +444,9 @@ class Inputs(QWidget):
         if not d:
             return
         ship = d.get("ship")
-        if ship and db is not None:
+        if d.get("standard"):
+            self.load_standard(tuple(d["standard"]))
+        elif ship and db is not None:
             year = next((h for h in db.history(ship["imo"]) if h.year == ship["year"]), None)
             if year is not None:
                 self.load_ship(year)
@@ -427,6 +471,8 @@ class Inputs(QWidget):
             self.ratio_text.hide()
         if not d.get("share_from_estimate"):
             self.share_estimate = None
+        if not d.get("size_from_estimate"):
+            self.size_estimate = None
         self.scope_override = d.get("scope_override", self.scope_override)
         self._cii_type_changed()
         self._show_share_method()
@@ -533,26 +579,27 @@ class Results(QWidget):
         p = theme.current()
         years = [x.year for x in results]
         self.ov_chart.set_data(years, [(tr("legend.ets_cost"), [x.ets.cost for x in results], p.ets),
-                                       (tr("legend.fueleu"), [x.fueleu.penalty for x in results], p.fueleu),
+                                       (tr("legend.fueleu"), [x.fueleu_cost for x in results], p.fueleu),
                                        (tr("legend.nzf"), [max(x.nzf.cost_eur, 0) for x in results], p.imo)])
 
         def rating(x):
             return x.cii.rating if x.cii and not math.isnan(x.cii.attained) else "–"
 
         fill_table(self.ov_table, ["col.year", "col.ets", "col.fueleu", "col.nzf", "col.total", "col.cii"],
-                   [[str(x.year), num(x.ets.cost), num(x.fueleu.penalty), num(x.nzf.cost_eur), num(x.total_eur),
+                   [[str(x.year), num(x.ets.cost), num(x.fueleu_cost), num(x.nzf.cost_eur), num(x.total_eur),
                      rating(x)] for x in results])
         self.reg_charts["ets"].set_data(years, [x.ets.cost for x in results], p.ets)
         fill_table(self.reg_tables["ets"], ["ets.col.year", "ets.col.covered", "ets.col.phase", "ets.col.allowances",
                                             "ets.col.price", "ets.col.cost"],
                    [[str(x.year), num(x.ets.covered), pct(x.ets.phase_in), num(x.ets.allowances), num(x.ets.price, 2),
                      num(x.ets.cost)] for x in results])
-        self.reg_charts["fueleu"].set_data(years, [x.fueleu.penalty for x in results], p.fueleu)
+        self.reg_charts["fueleu"].set_data(years, [x.fueleu_cost for x in results], p.fueleu)
         fill_table(self.reg_tables["fueleu"], ["col.year", "col.energy", "col.intensity", "col.target", "col.balance",
-                                               "col.penalty"],
+                                               "col.route", "col.cost"],
                    [[str(x.year), num(x.fueleu.energy_mj / 1000),
                      num(x.fueleu.intensity, 2) if x.fueleu.in_scope else "–", num(x.fueleu.target, 2),
-                     num(x.fueleu.balance_t), num(x.fueleu.penalty)] for x in results])
+                     num(x.fueleu.balance_t), tr(f"route.{x.route}", share=pct(x.bio_share)),
+                     num(x.fueleu_cost)] for x in results])
         self.reg_charts["nzf"].set_data(years, [max(x.nzf.cost_eur, 0) for x in results], p.imo)
         fill_table(self.reg_tables["nzf"], ["col.year", "col.energy", "col.gfi", "col.base", "col.direct", "col.tier2",
                                             "col.tier1", "col.surplus", "col.cost"],

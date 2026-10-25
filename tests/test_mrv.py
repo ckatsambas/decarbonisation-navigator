@@ -115,3 +115,9 @@ def test_bundled_database_created_then_merged(mrv_db_path, tmp_path):
     assert d.count() == 3
     d.close()
     assert mrv.ensure_database(tmp_path / "x.sqlite", tmp_path / "missing.xz") == "no-bundle"
+
+
+def test_profile_carries_size_and_share_estimates(db):
+    p = db.latest("9000001").profile()
+    assert p.eu_share is not None and p.eu_share.size_class is not None
+    assert p.eu_share.method in ("estimated", "eu_dominant")
