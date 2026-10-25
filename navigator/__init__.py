@@ -2,4 +2,4 @@
 
 APP_NAME = "Decarbonisation Navigator"
 APP_ORG = "Christos Katsampas"
-__version__ = "0.1.0"
+__version__ = "0.1.3"
