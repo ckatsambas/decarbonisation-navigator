@@ -24,6 +24,7 @@ from ...engine import economics as EC
 from ...engine import measures as M
 from ...engine import power as PW
 from ...engine.compliance import Rules
+from ...engine.mcda import criteria as MC
 from ...i18n import eur_short, num, pct, pick, tr
 from .. import theme
 from ..charts import CashFlowChart
@@ -183,12 +184,33 @@ class StepOptions(Page):
         self.shortlist = {k for k in d.get("shortlist", []) if k in self.lib.measures}
         self.recompute()
 
+    # ------------------------------------------------------------------ alternatives for steps 4–5
+    def scenario(self):
+        return self.position.inputs.scenario(self.position.view)
+
+    def mcda_settings(self) -> MC.Settings:
+        st = self.settings()
+        return MC.Settings(st["start"], st["life"], st["prices"], st["rate"])
+
+    def alternatives(self) -> list:
+        """Shortlisted measures (+ "do nothing") with their criteria values; cached."""
+        if not getattr(self, "model", None) or not self.shortlist:
+            return []
+        sc = self.scenario()
+        key = (repr(sc), repr(self.mcda_settings()), tuple(sorted(self.shortlist)), id(self.model))
+        if getattr(self, "_alt_key", None) != key:
+            alts = [MC.alternative(self.model, (self.lib[k],), sc, self.mcda_settings(), self.rules, k)
+                    for k in sorted(self.shortlist) if any(r.ok and r.m.key == k for r in self.rows)]
+            self._alts, self._alt_key = [*alts, MC.do_nothing()], key
+        return self._alts
+
     # ------------------------------------------------------------------ compute
     def recompute(self) -> None:
         pos = self.position
         prof = pos.inputs.profile()
         try:
-            model = M.model_for(prof, self.rules.fuels)
+            model = M.model_for(prof, self.rules.fuels, cls_key=pos.inputs.size_class_key(),
+                                hours_at_sea=pos.inputs.hours_at_sea())
         except (ValueError, KeyError, ZeroDivisionError):
             self.rows = []
             self._fill()

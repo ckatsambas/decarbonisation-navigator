@@ -159,3 +159,55 @@ class CashFlowChart(pg.PlotWidget):
 
     def restyle(self) -> None:
         style_plot(self)
+
+
+class HBarChart(pg.PlotWidget):
+    """Horizontal bars with category labels on the left (weights, shares); optional stacking."""
+
+    def __init__(self, percent: bool = True):
+        super().__init__()
+        self.percent = percent
+        self.setMinimumHeight(200)
+        self.setMenuEnabled(False)
+        self.setMouseEnabled(x=False, y=False)
+        self.hideButtons()
+        self.legend = None
+        self._style()
+
+    def _style(self) -> None:
+        style_plot(self)
+        pi = self.getPlotItem()
+        pi.showGrid(x=True, y=False, alpha=0.25)
+        pi.getAxis("left").setWidth(250)
+
+    def set_data(self, labels: list[str], series: list[tuple[str, list[float], str]]) -> None:
+        self.clear()
+        if self.legend is None and len(series) > 1:
+            self.legend = self.addLegend(offset=(8, 4), colCount=min(len(series), 6))
+        if self.legend is not None:
+            self.legend.clear()
+            self.legend.setLabelTextColor(theme.current().muted)
+        n = len(labels)
+        ys = list(range(n))[::-1]
+        left = [0.0] * n
+        for name, vals, color in series:
+            item = pg.BarGraphItem(x0=left, y=ys, height=0.62, width=vals, brush=QColor(color), pen=pg.mkPen(None),
+                                   name=name if len(series) > 1 else None)
+            self.addItem(item)
+            left = [a + b for a, b in zip(left, vals, strict=True)]
+        ax = self.getAxis("left")
+        ax.setTicks([[(y, lab) for y, lab in zip(ys, labels, strict=True)]])
+        from PySide6.QtGui import QFontMetrics
+        fm = QFontMetrics(ax.style.get("tickFont") or self.font())
+        ax.setWidth(min(max((fm.horizontalAdvance(t) for t in labels), default=60) + 24, 420))
+        bottom = self.getAxis("bottom")
+        top = max(left, default=1) or 1
+        if self.percent:
+            step = 0.25 if top > 0.6 else 0.1
+            bottom.setTicks([[(i * step, f"{num(i * step * 100)}%") for i in range(int(top / step) + 2)]])
+        self.setYRange(-0.6, n - 0.4 + (0.9 if len(series) > 1 else 0), padding=0)
+        self.setXRange(0, top * 1.05, padding=0)
+        self.setMinimumHeight(max(160, 34 * n + (100 if len(series) > 1 else 60)))
+
+    def restyle(self) -> None:
+        self._style()

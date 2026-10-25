@@ -8,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from PySide6.QtCore import Qt
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -64,6 +66,32 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     opt.table.setCurrentCell(row, 1)
     app.processEvents()
     w.grab().save(str(out / f"step3-{lang}-{pal.name}.png"))
+    for key in ("rotor_sails", "hull_coating", "propulsion_devices", "biofuel_blend", "methanol_dual_fuel"):
+        i = next((i for i, r in enumerate(opt.rows) if r.m.key == key and r.ok), None)
+        if i is not None:
+            opt.table.item(i, 0).setCheckState(Qt.CheckState.Checked)
+    pv.next_btn.click()
+    pri = pv.priorities_step
+    fam = pri.levels["families"].bwm
+    fam.best.setCurrentIndex(0)
+    fam.worst.setCurrentIndex(4)
+    for k, v in {"climate": 2, "technology": 4, "operations": 3, "regulation": 7}.items():
+        fam.bo[k].slider.setValue(v)
+    for k, v in {"money": 7, "climate": 5, "technology": 2, "operations": 3}.items():
+        fam.ow[k].slider.setValue(v)
+    app.processEvents()
+    w.grab().save(str(out / f"step4-{lang}-{pal.name}.png"))
+    pv.next_btn.click()
+    dec = pv.decision_step
+    from navigator.engine.mcda import criteria as MC
+    from navigator.engine.mcda import smaa as S
+    sim = S.Simulator(opt.model, {a.key: a.measures for a in dec.alts if a.key != MC.DO_NOTHING}, opt.scenario(),
+                      opt.mcda_settings(), opt.rules)
+    dec.show_smaa(S.run(sim, True, pri.global_weights(), n=10000, kappa=100))
+    app.processEvents()
+    dec.verticalScrollBar().setValue(dec.verticalScrollBar().maximum() // 3)
+    app.processEvents()
+    w.grab().save(str(out / f"step5-{lang}-{pal.name}.png"))
     w.new_project()                                   # a standard ship from the library
     pv = w.project_view
     pv.ship_step.set_mode("standard")

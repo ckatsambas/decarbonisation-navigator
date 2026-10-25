@@ -312,6 +312,23 @@ class Inputs(QWidget):
             return self.share_estimate
         return user_share(self.eu_share.value() / 100)
 
+    def size_class_key(self) -> str | None:
+        """IMO size class of the ship for the power model (standard ship, estimate or reported type)."""
+        if self.standard:
+            return self.standard[0]
+        if self.share_estimate is not None and self.share_estimate.size_class:
+            return self.share_estimate.size_class
+        if self.loaded is not None:
+            t = R.MRV_TO_IMO.get(self.loaded.get("ship_type", ""))
+            if t:
+                unit = self.rules.cii.capacity_unit(self.cii_type.currentData()) if self.cii_type.currentData() else "dwt"
+                cap = self.capacity.value() or None
+                return R.class_for(t, dwt=cap if unit == "dwt" else None, gt=cap if unit == "gt" else None).key
+        return None
+
+    def hours_at_sea(self) -> float | None:
+        return self.loaded.get("time_at_sea") if self.loaded is not None else None
+
     def profile(self) -> Profile:
         return Profile(ship=self.ship(), emissions=self.emissions(), fuel_mix=self.fuel_mix(),
                        cii_type=self.cii_type.currentData(), capacity=self.capacity.value(),

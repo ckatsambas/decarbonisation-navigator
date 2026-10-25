@@ -281,19 +281,20 @@ def imo_type(profile: Profile) -> str:
     return R.MRV_TO_IMO.get(profile.ship.ship_type, "service_other")
 
 
-def model_for(profile: Profile, fuels: dict[str, F.Fuel] | None = None, rules: PW.PowerRules | None = None) -> ShipModel:
-    """Calibrate the power model on the profile's EU-recorded year."""
+def model_for(profile: Profile, fuels: dict[str, F.Fuel] | None = None, rules: PW.PowerRules | None = None,
+              cls_key: str | None = None, hours_at_sea: float | None = None) -> ShipModel:
+    """Calibrate the power model on the profile's EU-recorded year (class and hours can be given)."""
     fuels = fuels or F.load()
     rules = rules or PW.default_rules()
     share = profile.eu_share
-    cls_key = share.size_class if share and share.size_class else None
+    cls_key = cls_key or (share.size_class if share and share.size_class else None)
     cls = R.by_key(cls_key) if cls_key else R.class_for(imo_type(profile), dwt=profile.capacity or None,
                                                          gt=profile.ship.gross_tonnage or None)
     co2 = profile.emissions.co2
     per_t = F.co2_per_t(profile.fuel_mix, fuels) or 3.114
     port_t = co2.in_port / per_t
     sea_t = (co2.total - co2.in_port) / per_t
-    hours = share.mrv_hours if share and share.mrv_hours else None
+    hours = hours_at_sea or (share.mrv_hours if share and share.mrv_hours else None)
     if not hours:                                    # no reported time at sea: the class's speed
         v = cls.value("speed_at_sea") or 12.0
         hours = profile.distance_nm / v if profile.distance_nm else cls.value("days_at_sea") * 24

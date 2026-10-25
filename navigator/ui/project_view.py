@@ -6,8 +6,10 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QPushButton, QStackedWidget, 
 
 from ..data.projects import Project, ProjectStore
 from ..i18n import tr
+from .pages.decision import StepDecision
 from .pages.options import StepOptions
 from .pages.position import StepPosition, StepUpcoming
+from .pages.priorities import StepPriorities
 from .pages.ship import StepShip
 from .state import AppState
 from .stepper import RouteStepper
@@ -46,8 +48,10 @@ class ProjectView(QWidget):
         self.ship_step = StepShip(state)
         self.position_step = StepPosition(state)
         self.options_step = StepOptions(state, self.position_step)
-        self.steps = [self.ship_step, self.position_step, self.options_step, StepUpcoming(state, 4, 4, 3),
-                      StepUpcoming(state, 5, 4, 3), StepUpcoming(state, 6, 5, 3)]
+        self.priorities_step = StepPriorities(state, self.options_step)
+        self.decision_step = StepDecision(state, self.options_step, self.priorities_step)
+        self.steps = [self.ship_step, self.position_step, self.options_step, self.priorities_step,
+                      self.decision_step, StepUpcoming(state, 6, 5, 3)]
         for s in self.steps:
             self.stack.addWidget(s)
         bv.addWidget(self.stack)
@@ -79,6 +83,8 @@ class ProjectView(QWidget):
         state.standard_changed.connect(self._standard_chosen)
         self.position_step.computed.connect(self._dirty)
         self.options_step.changed.connect(self._dirty)
+        self.priorities_step.changed.connect(self._dirty)
+        self.decision_step.changed.connect(self._dirty)
         state.ship_changed.connect(lambda _: self._refresh_nav())
         state.view_changed.connect(lambda _: self._dirty())
 
@@ -102,7 +108,10 @@ class ProjectView(QWidget):
             elif inputs.standard is not None:
                 self.ship_step.set_mode("standard")
             self.position_step.recompute()
-            self.options_step.restore(project.inputs.get("options") if project.inputs else None)
+            saved = project.inputs or {}
+            self.options_step.restore(saved.get("options"))
+            self.priorities_step.restore(saved.get("priorities"))
+            self.decision_step.restore(saved.get("decision"))
             self.current = 0
             self.go(min(project.step, project.reached), save=False)
         finally:
@@ -117,7 +126,8 @@ class ProjectView(QWidget):
             return
         p = self.project
         inputs = self.position_step.inputs
-        p.inputs = {**inputs.snapshot(), "options": self.options_step.snapshot()}
+        p.inputs = {**inputs.snapshot(), "options": self.options_step.snapshot(),
+                    "priorities": self.priorities_step.snapshot(), "decision": self.decision_step.snapshot()}
         p.view = self.state.view
         y = inputs.loaded
         p.ship = {"imo": y.imo, "year": y.year, "name": y.get("name", ""), "type": y.get("ship_type", "")} if y else None
@@ -125,7 +135,7 @@ class ProjectView(QWidget):
             from ..engine import reference as R
             c = R.by_key(inputs.standard[0])
             p.ship = {"imo": "", "year": 2018, "name": self.ship_step.std_pane.name, "type": f"{c.label} {size_label(c)}"}
-        p.summary = self.position_step.summary()
+        p.summary = {**self.position_step.summary(), **self.decision_step.summary()}
         p.step, p.reached = self.current, max(p.reached, self.current)
         self.store.save(p)
         self.saved.emit(p.id)

@@ -15,9 +15,8 @@ from ..widgets import Fold, Panel, ReadMore, TrLabel, amp, label
 from .base import Page
 from .regulation import Inputs, Results, spin
 
-# Carbon-price paths (EUA €/t at 2025, 2030, 2050). Scenario assumptions, not forecasts.
-PRICE_PATHS = {"low": {2025: 70, 2030: 80, 2050: 100}, "central": {2025: 75, 2030: 110, 2050: 150},
-               "high": {2025: 80, 2030: 150, 2050: 250}}
+# Carbon-price paths (EUA €/t at 2025, 2030, 2050) from markets.json. Scenario assumptions, not forecasts.
+PRICE_PATHS = Rules.load().markets.eua_paths
 
 
 class Choice(QWidget):

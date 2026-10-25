@@ -14,15 +14,14 @@ reminds the author when an item becomes due. Tick items off with the commit that
       if still meaningful.
 - [ ] Rerun validation and the thesis case-study numbers; update thesis chapters 2 and 7.
 - [ ] Rerun the least-cost baseline (its NZF part) with the adopted rules (0008-4).
+- [ ] Replace the equal NZF odds in SMAA (`markets.json` nzf_probability) with the vote's actual outcome (0010).
 
 ## When Phase 4 (MCDA + SMAA) starts
-- [ ] Vectorise the engine with NumPy (EU ETS, FuelEU, NZF, CII) for tens of thousands of runs
-      (decision 0007-6; groundwork laid in Phase 2).
-- [ ] SMAA samples, with common random numbers across alternatives: EU share (0007-2), ship size
-      (0007-1), every PERT input (0007-3), EUA price path, NZF outcome.
-- [ ] Use the least-cost compliance baseline (0007-5) as the reference for every alternative;
-      report "pay penalties" as a sensitivity case.
-- [ ] Move the worldwide estimate's uncertainty from a display range into SMAA (0005, 0007-2).
+- [x] Vectorise the engine with NumPy for tens of thousands of runs (0010: `mcda/smaa.py`, CII not needed).
+- [x] SMAA samples with common random numbers: EU share, every PERT input, prices, EUA path, NZF outcome,
+      weights (0010). Ship size only affects CII, which is not a criterion.
+- [x] Least-cost compliance is the reference for every alternative and a "do nothing" option (0010).
+- [x] The worldwide estimate's range is sampled in SMAA (0010).
 - [ ] FuelEU pooling, banking and borrowing at fleet level (0005).
 
 ## EU reviews before the thesis deadline

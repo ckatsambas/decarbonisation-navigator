@@ -37,13 +37,17 @@ class Markets:
     pool_price: Estimate          # € per t CO2e
     bio_premium: Estimate         # $ per t biofuel above fossil
     bio_fuel: str
+    eua_paths: dict = field(default_factory=dict)        # low / central / high → {year: €/t}
+    nzf_probability: dict = field(default_factory=dict)  # NZF outcome → probability (SMAA)
 
     @classmethod
     def load(cls, override_dir: Path | None = None) -> Markets:
         ps = _params.load("markets", override_dir=override_dir)
         pp, bp = ps["pool_price_eur"], ps["bio_premium_usd"]
+        eua = {k: {int(y): float(v) for y, v in path.items()} for k, path in ps["eua_eur"].items()}
         return cls(Estimate(pp["low"], pp["likely"], pp["high"], "market", "markets"),
-                   Estimate(bp["low"], bp["likely"], bp["high"], "market", "markets"), ps["bio_fuel"])
+                   Estimate(bp["low"], bp["likely"], bp["high"], "market", "markets"), ps["bio_fuel"],
+                   eua, dict(ps["nzf_probability"]))
 
 YEARS = range(2024, 2051)
 

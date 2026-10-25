@@ -191,3 +191,41 @@ def test_options_step_lists_measures_and_keeps_shortlist(win):
     win.open_project(pid)
     opt = win.project_view.options_step
     assert opt.shortlist == {"rotor_sails"} and opt.settings()["rate"] == pytest.approx(0.10)
+
+
+def test_priorities_and_decision_with_smaa(win, qtbot):
+    win.new_project()
+    pv = win.project_view
+    pv.ship_step.set_mode("standard")
+    pv.ship_step.std_pane.pick_preset("kamsarmax")
+    pv.ship_step.std_pane.use_btn.click()
+    pv.next_btn.click()
+    pv.next_btn.click()
+    opt = pv.options_step
+    for key in ("hull_coating", "rotor_sails", "biofuel_b100"):
+        i = next(i for i, r in enumerate(opt.rows) if r.m.key == key)
+        opt.table.item(i, 0).setCheckState(Qt.CheckState.Checked)
+    pv.next_btn.click()
+    pri = pv.priorities_step
+    assert len(opt.alternatives()) == 4                        # three measures + do nothing
+    fam = pri.levels["families"]
+    fam.bwm.best.setCurrentIndex(0)                            # money most important
+    fam.bwm.worst.setCurrentIndex(4)                           # regulation least
+    assert pri.global_weights().sum() == pytest.approx(1)
+    assert pri.results["families"].acceptable
+    pri._method("ahp")
+    assert pri.levels["money"].method == "ahp"
+    pri._method("bwm")
+    pv.next_btn.click()
+    dec = pv.decision_step
+    assert dec.table.rowCount() == 4 and set(dec.rankings) == {"saw", "topsis", "promethee", "vikor"}
+    dec.draws.set_value("2000")
+    dec.run_smaa()
+    qtbot.waitUntil(lambda: dec.smaa is not None, timeout=60_000)
+    assert dec.smaa.acceptability.shape == (4, 4) and dec.smaa_table.rowCount() == 4
+    pv.save_now()
+    pid = pv.project.id
+    win.show_lobby()
+    win.open_project(pid)
+    pri = win.project_view.priorities_step
+    assert pri.levels["families"].bwm.best.currentData() == "money"
