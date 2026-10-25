@@ -17,6 +17,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "navigator" / "resources"
+sys.path.insert(0, str(ROOT))
+from navigator.data.mrv import IMPORTER_VERSION  # noqa: E402
 
 
 def main(src: Path) -> None:
@@ -33,6 +35,7 @@ def main(src: Path) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "mrv.sqlite.xz").write_bytes(lzma.compress(raw, preset=9))
     manifest = {"source": "EMSA THETIS-MRV public emission reports", "url": "https://mrv.emsa.europa.eu",
+                "importer": IMPORTER_VERSION,
                 "releases": releases, "ships": ships, "full_reports": reports,
                 "sha256": hashlib.sha256(raw).hexdigest()}
     (OUT / "mrv_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
