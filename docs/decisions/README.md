@@ -15,3 +15,4 @@ and what follows from it. These notes are the raw material for thesis chapter 6
 | [0007](0007-phase2-plan.md) | Phase 2 plan: ship size, worldwide range, PERT uncertainty, baselines, validation |
 | [0008](0008-estimation-methods.md) | Estimation methods: size (EEDI + fuel per hour + type range), EU share, PERT, least-cost baseline, standard ships |
 | [0009](0009-phase3-plan.md) | Phase 3 plan: 25 adaptive measures, IMO-study power model, fuel price paths, NPV |
+| [0010](0010-phase4-plan.md) | Phase 4 plan: criteria tree, BWM/AHP, four ranking methods + consensus, SMAA-2 on inputs and weights |
