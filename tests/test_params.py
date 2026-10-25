@@ -21,7 +21,8 @@ def test_unverified_values_are_reported(tmp_path):
         "values": {"first_year": {"value": 2024, "source": "me", "status": "verify"}},
     }), encoding="utf-8")
     ps = params.load("eu_ets_maritime", override_dir=tmp_path)
-    assert [p.key for p in ps.unverified()] == ["first_year"]
+    assert "first_year" in [p.key for p in ps.unverified()]
+    assert "phase_in" not in [p.key for p in ps.unverified()]
 
 
 def test_user_override(tmp_path):

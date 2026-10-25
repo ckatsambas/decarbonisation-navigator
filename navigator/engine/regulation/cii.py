@@ -9,6 +9,7 @@ from EU data equals the worldwide estimate: CII does not depend on the EU/WW cho
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -94,13 +95,13 @@ class CiiYear:
     rating: str
 
 
-def cii_path(cii_type: str, capacity: float, co2_t: float, distance_nm: float, years: range,
+def cii_path(cii_type: str, capacity: float, co2_t: float | Callable[[int], float], distance_nm: float, years: range,
              rules: CiiRules | None = None) -> list[CiiYear]:
-    """Rating each year if the ship keeps operating as in the reported year."""
+    """Rating each year; `co2_t` is the reported year's CO2 (kept every year) or a function of the year."""
     rules = rules or CiiRules.load()
-    att = attained(co2_t, capacity, distance_nm)
     out = []
     for y in years:
+        att = attained(co2_t(y) if callable(co2_t) else co2_t, capacity, distance_nm)
         req = rules.required(cii_type, capacity, y)
         out.append(CiiYear(y, att, req, att / req, rules.rating(cii_type, capacity, att, req)))
     return out

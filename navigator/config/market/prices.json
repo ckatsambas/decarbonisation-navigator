@@ -1,0 +1,435 @@
+{
+ "name": "prices",
+ "title": {
+  "el": "Τιμές καυσίμων και αγοράς",
+  "en": "Fuel and market prices"
+ },
+ "sources": {
+  "market_oct26": {
+   "title": "Ship & Bunker port indications 6 Oct 2026 (via ShipUniverse, 7 Oct 2026): Rotterdam VLSFO $682.50/t, MGO $1,340/t, HSFO $613/t; ENGINE Fuel Switch Snapshot 5 Oct 2026: Rotterdam LNG $240–364/t and LBM $162–290/t VLSFO-equivalent above VLSFO; ENGINE Biofuel Bunker Snapshot 12 Oct 2026: B100 $1,185/t",
+   "url": "https://www.shipuniverse.com/?p=22139",
+   "checked": "2026-10-25"
+  },
+  "dnv_mf2026": {
+   "title": "DNV (2026), Maritime Forecast to 2050: LSHFO 502/389/394 USD/toe and fossil LNG 410/440/473 USD/toe in 2030/2040/2050; FAME example 1,800 USD/toe in 2030; abatement costs (Table 4-1) biofuels 160–880 / 130–810 and e-fuels 550–1,440 / 380–890 USD/tCO2eq in 2040 / 2050; e-ammonia 680/550/380 USD/tCO2eq; discount rate 8%",
+   "url": "https://www.dnv.com/maritime/publications/maritime-forecast/",
+   "checked": "2026-10-25"
+  },
+  "lr_umas_2020": {
+   "title": "Lloyd's Register & UMAS (2020), Techno-economic assessment of zero-carbon fuels, Table B3: lower and upper bound fuel prices 2030–2050 (USD/GJ)",
+   "url": "https://www.methanol.org/wp-content/uploads/2020/04/Techno_economic_assessment_of_zero_carbon_fuels.pdf",
+   "checked": "2026-10-25"
+  },
+  "emsa_wind": {
+   "title": "EMSA / CE Delft (2023), Potential of Wind-Assisted Propulsion for Shipping, Table 11: VLSFO 10.5–14.6 and FAME 20.1–26.6 EUR/GJ in 2030; green ammonia 29.2–38.0 EUR/GJ in 2050",
+   "url": "https://emsa.europa.eu/publications/reports/item/5078-potential-of-wind-assisted-propulsion-for-shipping.html",
+   "checked": "2026-10-25"
+  },
+  "emsa_als": {
+   "title": "EMSA (2026), Hull Air Lubrication System Study, Table 2-17: current HFO 357, MDO 480, LNG 728 EUR/t; discount rate 8% (after DNV)",
+   "url": "https://www.emsa.europa.eu/publications/item/5633-hull-air-lubrication-system-study.html",
+   "checked": "2026-10-25"
+  },
+  "imo4_q": {
+   "title": "Fourth IMO GHG Study 2020, Annex Q: interest rate 4% (IMarEST 2011: 10%); standard ship lifetime 25 years",
+   "url": "https://www.imo.org/en/ourwork/Environment/Pages/Fourth-IMO-Greenhouse-Gas-Study-2020.aspx",
+   "checked": "2026-10-25"
+  },
+  "eurostat_h2_2025": {
+   "title": "Eurostat non-household electricity prices, second half of 2025 (reported by Cyprus Mail, 8 May 2026): EU average €18.37 per 100 kWh; Ireland €25.52; Finland €7.48",
+   "url": "https://cyprus-mail.com/2026/05/08/cyprus-businesses-pay-second-highest-electricity-rates-in-europe",
+   "checked": "2026-10-25"
+  },
+  "clarksea_oct26": {
+   "title": "Clarksons Research via ShipUniverse (5 Oct 2026): ClarkSea Index $75,658/day, Q3 2026 average $46,384/day, 84% above the 10-year trend",
+   "url": "https://www.shipuniverse.com/?p=21695",
+   "checked": "2026-10-25"
+  },
+  "assume": {
+   "title": "Modelling assumption of this application, documented in docs/decisions/0009",
+   "checked": "2026-10-25"
+  }
+ },
+ "values": {
+  "fuel_usd_t": {
+   "value": {
+    "hfo": {
+     "2026": {
+      "low": 613,
+      "central": 613,
+      "high": 613
+     },
+     "2030": {
+      "low": 446,
+      "central": 466,
+      "high": 682
+     },
+     "2040": {
+      "low": 376,
+      "central": 411,
+      "high": 446
+     },
+     "2050": {
+      "low": 381,
+      "central": 413,
+      "high": 446
+     }
+    },
+    "lfo": {
+     "2026": {
+      "low": 682,
+      "central": 682,
+      "high": 682
+     },
+     "2030": {
+      "low": 451,
+      "central": 518,
+      "high": 760
+     },
+     "2040": {
+      "low": 381,
+      "central": 457,
+      "high": 496
+     },
+     "2050": {
+      "low": 386,
+      "central": 460,
+      "high": 496
+     }
+    },
+    "mgo": {
+     "2026": {
+      "low": 1340,
+      "central": 1340,
+      "high": 1340
+     },
+     "2030": {
+      "low": 599,
+      "central": 822,
+      "high": 1492
+     },
+     "2040": {
+      "low": 506,
+      "central": 725,
+      "high": 974
+     },
+     "2050": {
+      "low": 512,
+      "central": 730,
+      "high": 974
+     }
+    },
+    "lng_otto_ms": {
+     "2026": {
+      "low": 1179,
+      "central": 1179,
+      "high": 1179
+     },
+     "2030": {
+      "low": 441,
+      "central": 481,
+      "high": 1391
+     },
+     "2040": {
+      "low": 373,
+      "central": 516,
+      "high": 908
+     },
+     "2050": {
+      "low": 377,
+      "central": 555,
+      "high": 908
+     }
+    },
+    "lng_otto_ss": {
+     "2026": {
+      "low": 1179,
+      "central": 1179,
+      "high": 1179
+     },
+     "2030": {
+      "low": 441,
+      "central": 481,
+      "high": 1391
+     },
+     "2040": {
+      "low": 373,
+      "central": 516,
+      "high": 908
+     },
+     "2050": {
+      "low": 377,
+      "central": 555,
+      "high": 908
+     }
+    },
+    "lng_diesel_ss": {
+     "2026": {
+      "low": 1179,
+      "central": 1179,
+      "high": 1179
+     },
+     "2030": {
+      "low": 441,
+      "central": 481,
+      "high": 1391
+     },
+     "2040": {
+      "low": 373,
+      "central": 516,
+      "high": 908
+     },
+     "2050": {
+      "low": 377,
+      "central": 555,
+      "high": 908
+     }
+    },
+    "lng_lbsi": {
+     "2026": {
+      "low": 1179,
+      "central": 1179,
+      "high": 1179
+     },
+     "2030": {
+      "low": 441,
+      "central": 481,
+      "high": 1391
+     },
+     "2040": {
+      "low": 373,
+      "central": 516,
+      "high": 908
+     },
+     "2050": {
+      "low": 377,
+      "central": 555,
+      "high": 908
+     }
+    },
+    "methanol": {
+     "2026": {
+      "low": 195,
+      "central": 195,
+      "high": 195
+     },
+     "2030": {
+      "low": 179,
+      "central": 195,
+      "high": 564
+     },
+     "2040": {
+      "low": 151,
+      "central": 209,
+      "high": 368
+     },
+     "2050": {
+      "low": 153,
+      "central": 225,
+      "high": 368
+     }
+    },
+    "hvo": {
+     "2026": {
+      "low": 1409,
+      "central": 1409,
+      "high": 1409
+     },
+     "2030": {
+      "low": 1021,
+      "central": 1186,
+      "high": 1892
+     },
+     "2040": {
+      "low": 969,
+      "central": 1708,
+      "high": 3489
+     },
+     "2050": {
+      "low": 869,
+      "central": 1667,
+      "high": 3249
+     }
+    },
+    "fame": {
+     "2026": {
+      "low": 1185,
+      "central": 1185,
+      "high": 1185
+     },
+     "2030": {
+      "low": 858,
+      "central": 997,
+      "high": 1591
+     },
+     "2040": {
+      "low": 815,
+      "central": 1437,
+      "high": 2934
+     },
+     "2050": {
+      "low": 731,
+      "central": 1402,
+      "high": 2732
+     }
+    },
+    "bio_methanol": {
+     "2026": {
+      "low": 555,
+      "central": 555,
+      "high": 555
+     },
+     "2030": {
+      "low": 420,
+      "central": 555,
+      "high": 960
+     },
+     "2040": {
+      "low": 440,
+      "central": 737,
+      "high": 1586
+     },
+     "2050": {
+      "low": 395,
+      "central": 718,
+      "high": 1477
+     }
+    },
+    "bio_lng_otto_ms": {
+     "2026": {
+      "low": 1108,
+      "central": 1108,
+      "high": 1108
+     },
+     "2030": {
+      "low": 1050,
+      "central": 1388,
+      "high": 2400
+     },
+     "2040": {
+      "low": 1101,
+      "central": 1841,
+      "high": 3964
+     },
+     "2050": {
+      "low": 988,
+      "central": 1795,
+      "high": 3692
+     }
+    },
+    "e_methanol": {
+     "2026": {
+      "low": 1900,
+      "central": 1900,
+      "high": 1900
+     },
+     "2030": {
+      "low": 1453,
+      "central": 1900,
+      "high": 2348
+     },
+     "2040": {
+      "low": 1231,
+      "central": 1854,
+      "high": 2923
+     },
+     "2050": {
+      "low": 910,
+      "central": 1369,
+      "high": 1880
+     }
+    },
+    "e_diesel": {
+     "2026": {
+      "low": 6320,
+      "central": 6320,
+      "high": 6320
+     },
+     "2030": {
+      "low": 4868,
+      "central": 6320,
+      "high": 7771
+     },
+     "2040": {
+      "low": 2641,
+      "central": 4950,
+      "high": 6661
+     },
+     "2050": {
+      "low": 1952,
+      "central": 3770,
+      "high": 5551
+     }
+    },
+    "e_ammonia": {
+     "2026": {
+      "low": 1316,
+      "central": 1316,
+      "high": 1316
+     },
+     "2030": {
+      "low": 874,
+      "central": 1316,
+      "high": 1525
+     },
+     "2040": {
+      "low": 725,
+      "central": 1073,
+      "high": 1265
+     },
+     "2050": {
+      "low": 558,
+      "central": 790,
+      "high": 1023
+     }
+    }
+   },
+   "source": "dnv_mf2026",
+   "note": "Built by tools/build_prices.py from market_oct26, dnv_mf2026, lr_umas_2020, emsa_wind and emsa_als. Grey methanol follows LNG and bio-LNG follows waste bio-methanol (no direct forward source): to verify."
+  },
+  "electricity_eur_kwh": {
+   "value": {
+    "low": 0.0748,
+    "central": 0.1837,
+    "high": 0.2552
+   },
+   "source": "eurostat_h2_2025",
+   "note": "Non-household electricity, second half of 2025: EU average (central), Finland (low), Ireland (high). Port shore-power tariffs may differ."
+  },
+  "earnings_usd_day": {
+   "value": {
+    "default": {
+     "low": 24000,
+     "likely": 46384,
+     "high": 75658
+    }
+   },
+   "source": "clarksea_oct26",
+   "status": "verify",
+   "note": "Cross-sector ClarkSea Index: 5 Oct 2026 $75,658/day (high), Q3 2026 average $46,384/day (likely), ≈ 10-year trend $24,000/day (low; the index was 84% above trend). Ship-type figures to be added."
+  },
+  "discount_rate": {
+   "value": {
+    "low": 0.06,
+    "likely": 0.08,
+    "high": 0.1
+   },
+   "source": "dnv_mf2026",
+   "note": "Decision 0009-6. 8% as in DNV (2026) and EMSA (2026); IMO study 4%, IMarEST 10%."
+  },
+  "ship_life_years": {
+   "value": 25,
+   "source": "imo4_q"
+  },
+  "time_cost_share": {
+   "value": {
+    "low": 0.0,
+    "likely": 0.5,
+    "high": 1.0
+   },
+   "source": "imo4_q",
+   "status": "verify",
+   "note": "Share of extra days at sea that costs earnings; the IMO study assumed half the lost capacity is replaced by new ships."
+  }
+ }
+}

@@ -25,6 +25,22 @@ reminds the author when an item becomes due. Tick items off with the commit that
 - [ ] Move the worldwide estimate's uncertainty from a display range into SMAA (0005, 0007-2).
 - [ ] FuelEU pooling, banking and borrowing at fleet level (0005).
 
+## EU reviews before the thesis deadline
+- [ ] EU ETS review (Commission proposal July 2026, political agreement expected Q1 2027): update
+      `eu_ets_maritime.json` (scope, zero-rating of RFNBO, credit for onboard carbon capture) (0009).
+- [ ] FuelEU Maritime review by 31 December 2027 (may add onboard carbon capture as a compliance route);
+      after the thesis, but note it in chapter 2.
+
+## Phase 3 data to improve
+- [ ] Daily earnings by ship type (now one cross-sector ClarkSea range) for off-hire and slow-steaming costs.
+- [ ] Power model: MRV average speed understates sailing speed (validation report); consider the IMO class
+      sailing speed for the engine load, and a steam-turbine / boil-off model for LNG carriers.
+- [ ] Ammonia engines: N2O emissions not modelled yet; grey methanol and bio-LNG price paths borrowed
+      from LNG and waste bio-methanol.
+- [ ] FuelEU shore-power obligation (container and passenger ships from 2030) and its penalty are not in the
+      FuelEU engine yet; shore power currently earns only its fuel and carbon savings.
+- [ ] Weather routing and trim optimisation rest on Bouman (2017) plus an assumption: find measured data.
+
 ## Open data items
 - [x] Replace provisional days at sea with the Fourth IMO GHG Study tables (Phase 2, 0008).
 - [ ] Verify `individual_spread` (±25% days at sea) and the biofuel premium in `markets.json` (0008).

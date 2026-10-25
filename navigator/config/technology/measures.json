@@ -1,0 +1,2300 @@
+{
+ "name": "measures",
+ "title": {
+  "el": "Βιβλιοθήκη μέτρων απανθρακοποίησης",
+  "en": "Decarbonisation measure library"
+ },
+ "sources": {
+  "imo4_q": {
+   "title": "Fourth IMO GHG Study 2020, Annex Q: Tables 93–96 (technologies, applicability, maturity, expected lifetime, extrapolation basis, learning curves) and Section Q.2.7 (pilot fuel ~5% of heat for ammonia engines)",
+   "url": "https://www.imo.org/en/ourwork/Environment/Pages/Fourth-IMO-Greenhouse-Gas-Study-2020.aspx",
+   "checked": "2026-10-25"
+  },
+  "gv_coating": {
+   "title": "IMO GreenVoyage2050 EET portal: Hull performance coating (1–5% of total fuel; $30,000–600,000; recoated every fifth year)",
+   "url": "https://greenvoyage2050.imo.org/technology/hull-coating/",
+   "checked": "2026-10-25"
+  },
+  "gv_cleaning": {
+   "title": "IMO GreenVoyage2050 EET portal: Hull cleaning (1–5% of total fuel; $5,000–50,000 per cleaning)",
+   "url": "https://greenvoyage2050.imo.org/technology/hull-cleaning/",
+   "checked": "2026-10-25"
+  },
+  "gv_polishing": {
+   "title": "IMO GreenVoyage2050 EET portal: Propeller polishing (3–4% of main engine fuel; 0.5–3% annual average; $4,000–8,000, twice a year)",
+   "url": "https://greenvoyage2050.imo.org/technology/propeller-polishing/",
+   "checked": "2026-10-25"
+  },
+  "gv_propeller": {
+   "title": "IMO GreenVoyage2050 EET portal: Propeller retrofitting (2–6% of main engine fuel; $400,000–850,000; lifetime 15 years)",
+   "url": "https://greenvoyage2050.imo.org/technology/propeller-retrofitting/",
+   "checked": "2026-10-25"
+  },
+  "gv_als": {
+   "title": "IMO GreenVoyage2050 EET portal: Air lubrication (net 2–8% annual energy; 7–10% LNG carriers, cruise, ro-ro, ferries; 2–5% others; CAPEX 1–3% of newbuild cost)",
+   "url": "https://greenvoyage2050.imo.org/technology/air-cavity-lubrication/",
+   "checked": "2026-10-25"
+  },
+  "gv_whr": {
+   "title": "IMO GreenVoyage2050 EET portal: Waste heat recovery systems (2–6% of total fuel; up to 6% of main engine power as electricity; $5.2–11.5 million; maintenance $10,000–30,000 a year; engines ≥ 10 MW; usually newbuild)",
+   "url": "https://greenvoyage2050.imo.org/technology/waste-heat-recovery-systems/",
+   "checked": "2026-10-25"
+  },
+  "gv_tuning": {
+   "title": "IMO GreenVoyage2050 EET portal: Engine performance optimization, manual (1–3% of total fuel; $4,000–12,000)",
+   "url": "https://greenvoyage2050.imo.org/technology/engine-performance-optimization-manual/",
+   "checked": "2026-10-25"
+  },
+  "gv_derating": {
+   "title": "IMO GreenVoyage2050 EET portal: Engine de-rating (2–6% of main engine fuel; $55,000–2,500,000; 7–10 days in dock; top speed −10–15%)",
+   "url": "https://greenvoyage2050.imo.org/technology/engine-de-rating/",
+   "checked": "2026-10-25"
+  },
+  "gv_hybrid": {
+   "title": "IMO GreenVoyage2050 EET portal: Hybridization (2–15% of annual consumption; $0.5–5 million per ship, average $1.5–2.5 million; battery $500–900/kWh)",
+   "url": "https://greenvoyage2050.imo.org/technology/hybridization-plug-in-or-conventional/",
+   "checked": "2026-10-25"
+  },
+  "gv_shore": {
+   "title": "IMO GreenVoyage2050 EET portal: Shore power (50–100% in port; 0.5–15% of annual fuel; ship side $50,000–2,000,000)",
+   "url": "https://greenvoyage2050.imo.org/technology/shore-power/",
+   "checked": "2026-10-25"
+  },
+  "gv_steam": {
+   "title": "IMO GreenVoyage2050 EET portal: Steam plant operation improvement (10–30% of boiler fuel; $5,000 a year; crude and product tankers)",
+   "url": "https://greenvoyage2050.imo.org/technology/steam-plant-operation-improvement/",
+   "checked": "2026-10-25"
+  },
+  "emsa_als": {
+   "title": "EMSA / DNV (2026), Hull Air Lubrication System Study: net power gains at actual speed by ship type (Table 2-14, 9,329 ships), compressor power 3–5% of propulsion power, active ALS TRL 8–9, CAPEX formula (Section 2.7.3.2), OPEX 0.9% of system cost, 8% discount rate",
+   "url": "https://www.emsa.europa.eu/publications/item/5633-hull-air-lubrication-system-study.html",
+   "checked": "2026-10-25"
+  },
+  "emsa_wind": {
+   "title": "EMSA / CE Delft (2023), Potential of Wind-Assisted Propulsion for Shipping: units per ship type and size (Table 6), 2021 unit costs (Table 7), measured and simulated savings per installation (Section 2.1), TRL (rotor sails, suction wings, hard sails 9; kites 7–8)",
+   "url": "https://emsa.europa.eu/publications/reports/item/5078-potential-of-wind-assisted-propulsion-for-shipping.html",
+   "checked": "2026-10-25"
+  },
+  "bouman_2017": {
+   "title": "Bouman, E.A., Lindstad, E., Rialland, A.I., Strømman, A.H. (2017), State-of-the-art technologies, measures, and potential for reducing GHG emissions from shipping – A review, Transportation Research Part D 52, 408–421, Table 2 (CO2 reduction ranges from ~150 studies)",
+   "url": "https://doi.org/10.1016/j.trd.2017.03.022",
+   "checked": "2026-10-25"
+  },
+  "dnv_mf2026": {
+   "title": "DNV (2026), Maritime Forecast to 2050: retrofit business case (5,000 TEU: bow + propeller + PBCF, 16% saving, USD 2.35 million, within a standard dry-docking); EU ETS as the only explicit incentive for onboard carbon capture",
+   "url": "https://www.dnv.com/maritime/publications/maritime-forecast/",
+   "checked": "2026-10-25"
+  },
+  "mmmczcs_2022": {
+   "title": "Mærsk Mc-Kinney Møller Center (2022), Preparing Container Vessels for Conversion to Green Fuels: conversion 9–16% (methanol) and 14–24% (ammonia) of a $150 million 15,000 TEU newbuild; lost capacity 240–610 TEU (methanol), 540–1,100 TEU (ammonia)",
+   "url": "https://www.zerocarbonshipping.com/api/file/GB0oH-VjSpSCUskTdnltDg",
+   "checked": "2026-10-25"
+  },
+  "emsa_occ": {
+   "title": "EMSA (2026), Onboard Carbon Capture Technologies (corrigendum 5 March 2026): capture 15–60% over the operational profile, fuel penalty 9–30%, CAPEX €180–720 per t CO2 treated a year, disposal €54–117 per t, maintenance 3% of CAPEX, 8% discount rate (Tables 3-14, 3-15)",
+   "url": "https://www.emsa.europa.eu/publications/reports/item/5634-onboard-carbon-capture-technologies.html",
+   "checked": "2026-10-25"
+  },
+  "gia_jit_2022": {
+   "title": "IMO Low Carbon GIA / MarineTraffic & EERA (2022), Just In Time Arrival emissions study for container ships (2019 AIS): mean fuel saving 14.16% per voyage with whole-voyage optimisation, 5.90% (last 24 h), 4.23% (last 12 h)",
+   "url": "https://imo-newsroom.prgloo.com/news/study-lowering-containership-emissions-through-just-in-time-arrivals",
+   "checked": "2026-10-25"
+  },
+  "gv_guide_2022": {
+   "title": "IMO GreenVoyage2050 (2022), A Practical Guide to the Selection of Energy Efficiency Technologies for Ships: pre-duct average saving 5.5% ± 2.5–3% (GRIP data)",
+   "url": "https://greenvoyage2050.imo.org/practical-guide-to-the-selection-of-energy-efficiency-technologies-for-ships/",
+   "checked": "2026-10-25"
+  },
+  "bwlpg_2020": {
+   "title": "S&P Global Commodity Insights (23 Oct 2020): BW LPG dual-fuel retrofit of VLGC BW Gemini about $9 million per ship, 60 days in yard",
+   "url": "https://www.spglobal.com/commodity-insights/en/news-research/latest-news/coal/102320-feature-dorian-lpg-sees-dual-fuel-vlgc-upgrade-costing-3-times-scrubber-retrofitting",
+   "checked": "2026-10-25"
+  },
+  "assume": {
+   "title": "Modelling assumption of this application, documented in docs/decisions/0009",
+   "checked": "2026-10-25"
+  }
+ },
+ "values": {
+  "slow_steaming": {
+   "value": {
+    "group": "operation",
+    "name": {
+     "el": "Μείωση ταχύτητας 10%",
+     "en": "Slow steaming −10%"
+    },
+    "how": {
+     "el": "Η ισχύς πρόωσης αυξάνεται με τον κύβο της ταχύτητας: 10% χαμηλότερη ταχύτητα σημαίνει περίπου 27% λιγότερη ισχύ ανά ώρα, αλλά περισσότερες ημέρες ταξιδιού.",
+     "en": "Propulsion power rises with the cube of speed: 10% slower means about 27% less power per hour, but more days per voyage."
+    },
+    "effect": {
+     "type": "speed",
+     "value": {
+      "low": 0.1,
+      "likely": 0.1,
+      "high": 0.1
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "slow_steaming_20"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "imo4_q",
+     "bouman_2017"
+    ]
+   },
+   "source": "imo4_q",
+   "status": "verified",
+   "note": "Cost is the extra time at sea (economics.time_cost_share)."
+  },
+  "slow_steaming_20": {
+   "value": {
+    "group": "operation",
+    "name": {
+     "el": "Μείωση ταχύτητας 20%",
+     "en": "Slow steaming −20%"
+    },
+    "how": {
+     "el": "Όπως παραπάνω, με 20% χαμηλότερη ταχύτητα (Μελέτη IMO, Πίνακας 99).",
+     "en": "As above, 20% slower (IMO study, Table 99)."
+    },
+    "effect": {
+     "type": "speed",
+     "value": {
+      "low": 0.2,
+      "likely": 0.2,
+      "high": 0.2
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "slow_steaming"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "imo4_q",
+     "bouman_2017"
+    ]
+   },
+   "source": "imo4_q",
+   "status": "verified",
+   "note": "Variant of slow steaming."
+  },
+  "jit_arrival": {
+   "value": {
+    "group": "operation",
+    "name": {
+     "el": "Άφιξη ακριβώς στην ώρα (JIT)",
+     "en": "Just-in-time arrival"
+    },
+    "how": {
+     "el": "Αντί να φτάνει νωρίς και να περιμένει στην άγκυρα, το πλοίο ρυθμίζει την ταχύτητα ώστε να φτάσει όταν ελευθερωθεί η θέση. Χρειάζεται συνεργασία με το λιμάνι.",
+     "en": "Instead of arriving early and waiting at anchor, the ship sails slower to arrive when the berth is free. Needs the port to cooperate."
+    },
+    "effect": {
+     "type": "jit",
+     "value": {
+      "low": 0.03,
+      "likely": 0.04,
+      "high": 0.1
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 5000,
+     "high": 20000
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 8,
+     "availability": 3,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gia_jit_2022",
+     "bouman_2017"
+    ]
+   },
+   "source": "gia_jit_2022",
+   "status": "verified",
+   "note": "Value = waiting time turned into sailing time, as a share of hours at sea: 0.03–0.04 reproduces the 4.2–5.9% saving of optimising the last 12–24 h, 0.10 the 14% of whole-voyage optimisation (GIA 2022). Availability 3: depends on port cooperation."
+  },
+  "weather_routing": {
+   "value": {
+    "group": "operation",
+    "name": {
+     "el": "Δρομολόγηση βάσει καιρού",
+     "en": "Weather routing"
+    },
+    "how": {
+     "el": "Λογισμικό που επιλέγει διαδρομή με λιγότερο αντίθετο άνεμο και κύμα.",
+     "en": "Software that picks a route with less head wind and waves."
+    },
+    "effect": {
+     "type": "resistance",
+     "value": {
+      "low": 0.01,
+      "likely": 0.025,
+      "high": 0.04
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 3000,
+     "likely": 10000,
+     "high": 25000
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "bouman_2017",
+     "assume"
+    ]
+   },
+   "source": "bouman_2017",
+   "status": "verify",
+   "note": "Bouman (2017): voyage optimisation 0.1–48% (very wide); the IMO study left it out of its cost curves because the effect varies by operation. 1–4% kept as a conservative range."
+  },
+  "trim_optimisation": {
+   "value": {
+    "group": "operation",
+    "name": {
+     "el": "Βελτιστοποίηση διαγωγής",
+     "en": "Trim optimisation"
+    },
+    "how": {
+     "el": "Φόρτωση και έρμα ώστε η γάστρα να πλέει στη γωνία με τη μικρότερη αντίσταση.",
+     "en": "Loading and ballast set so the hull floats at the angle with least drag."
+    },
+    "effect": {
+     "type": "resistance",
+     "value": {
+      "low": 0.01,
+      "likely": 0.02,
+      "high": 0.05
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 30000,
+     "high": 100000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 10,
+     "likely": 10,
+     "high": 10
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "bouman_2017",
+     "assume"
+    ]
+   },
+   "source": "bouman_2017",
+   "status": "verify",
+   "note": ""
+  },
+  "hull_coating": {
+   "value": {
+    "group": "hull",
+    "name": {
+     "el": "Επίστρωση γάστρας χαμηλής τριβής",
+     "en": "Low-friction hull coating"
+    },
+    "how": {
+     "el": "Επίστρωση σιλικόνης ή άλλη προηγμένη επίστρωση που μειώνει την τριβή και τις επικαθίσεις. Εφαρμόζεται στη δεξαμενή, κάθε περίπου 5 χρόνια.",
+     "en": "Silicone or other advanced coating that lowers friction and fouling. Applied in drydock, about every 5 years."
+    },
+    "effect": {
+     "type": "resistance",
+     "value": {
+      "low": 0.012,
+      "likely": 0.035,
+      "high": 0.06
+     }
+    },
+    "capex": {
+     "basis": "per_dwt",
+     "low": 1.5,
+     "likely": 2.5,
+     "high": 4.0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 5,
+     "likely": 5,
+     "high": 5
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_coating",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_coating",
+   "status": "verified",
+   "note": "GreenVoyage gives 1–5% of total fuel; divided by a main-engine share of ~0.85. CAPEX per DWT from the $30,000–600,000 range across sizes."
+  },
+  "hull_cleaning_polishing": {
+   "value": {
+    "group": "hull",
+    "name": {
+     "el": "Καθαρισμός γάστρας και στίλβωση έλικας",
+     "en": "Hull cleaning and propeller polishing"
+    },
+    "how": {
+     "el": "Τακτικός υποβρύχιος καθαρισμός της γάστρας και στίλβωση της έλικας από δύτες ή ρομπότ, συνήθως όταν το πλοίο είναι στο λιμάνι.",
+     "en": "Regular in-water hull cleaning and propeller polishing by divers or robots, usually while the ship is in port."
+    },
+    "effect": {
+     "type": "resistance",
+     "value": {
+      "low": 0.015,
+      "likely": 0.03,
+      "high": 0.06
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 13000,
+     "likely": 35000,
+     "high": 66000
+    },
+    "lifetime": {
+     "low": 1,
+     "likely": 1,
+     "high": 1
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_cleaning",
+     "gv_polishing",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_cleaning",
+   "status": "verified",
+   "note": "OPEX = one hull cleaning ($5,000–50,000) + two propeller polishings ($4,000–8,000 each) a year."
+  },
+  "air_lubrication": {
+   "value": {
+    "group": "hull",
+    "name": {
+     "el": "Λίπανση με αέρα",
+     "en": "Air lubrication"
+    },
+    "how": {
+     "el": "Συμπιεστές δημιουργούν στρώμα φυσαλίδων κάτω από τον επίπεδο πυθμένα και μειώνουν την τριβή. Καλύτερα σε φαρδιά πλοία με μικρό βύθισμα (LNG, ro-ro, κρουαζιερόπλοια).",
+     "en": "Compressors make a carpet of air bubbles under the flat bottom and cut friction. Best on wide ships with shallow draught (LNG carriers, ro-ro, cruise ships)."
+    },
+    "effect": {
+     "type": "als",
+     "compressor_share": 0.0,
+     "value": {
+      "by_type": {
+       "bulk": {
+        "low": 0.008,
+        "likely": 0.016,
+        "high": 0.05
+       },
+       "container": {
+        "low": 0.005,
+        "likely": 0.011,
+        "high": 0.05
+       },
+       "chemical": {
+        "low": 0.009,
+        "likely": 0.019,
+        "high": 0.05
+       },
+       "oil": {
+        "low": 0.004,
+        "likely": 0.008,
+        "high": 0.05
+       },
+       "general_cargo": {
+        "low": 0.01,
+        "likely": 0.02,
+        "high": 0.05
+       },
+       "gas": {
+        "low": 0.011,
+        "likely": 0.023,
+        "high": 0.1
+       },
+       "vehicle": {
+        "low": 0.012,
+        "likely": 0.025,
+        "high": 0.1
+       },
+       "roro": {
+        "low": 0.01,
+        "likely": 0.02,
+        "high": 0.1
+       },
+       "ropax": {
+        "low": 0.01,
+        "likely": 0.02,
+        "high": 0.1
+       },
+       "cruise": {
+        "low": 0.006,
+        "likely": 0.012,
+        "high": 0.1
+       },
+       "reefer": {
+        "low": 0.012,
+        "likely": 0.024,
+        "high": 0.05
+       },
+       "*": {
+        "low": 0.008,
+        "likely": 0.015,
+        "high": 0.05
+       }
+      }
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "tiers": [
+      {
+       "low": 808000.0,
+       "likely": 1039000.0,
+       "high": 1500000.0
+      },
+      {
+       "low": 1039000.0,
+       "likely": 1269000.0,
+       "high": 1846000.0
+      },
+      {
+       "low": 2539000.0,
+       "likely": 3231000.0,
+       "high": 4616000.0
+      }
+     ]
+    },
+    "opex": {
+     "basis": "capex_share",
+     "low": 0.005,
+     "likely": 0.007,
+     "high": 0.009
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "bulk",
+      "oil",
+      "chemical",
+      "gas",
+      "container",
+      "cruise",
+      "ropax",
+      "roro",
+      "vehicle",
+      "general_cargo",
+      "reefer"
+     ],
+     "min_mcr_kw": 3000
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 8,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "emsa_als",
+     "gv_als",
+     "bouman_2017",
+     "imo4_q"
+    ]
+   },
+   "source": "emsa_als",
+   "status": "verified",
+   "note": "Net saving as a share of propulsion power (compressor power deducted). Likely = EMSA (2026) average for the type at actual speed; low = half of it (the study's 95% confidence cases); high = GreenVoyage upper figure (5%, or 10% for LNG, ro-ro, cruise and ferries; Bouman 1–15%). CAPEX from the EMSA retrofit formula k1·k2·k3·width·√(T+12)·√V·1,000 € for typical dimensions: Handysize ≈ €1.0 m, Kamsarmax ≈ €1.1 m, Capesize ≈ €3.0 m, large container ≈ €2.8 m, LNG 174k m³ ≈ €2.5 m; Europe yard costs up to 1.7× China (high)."
+  },
+  "propulsion_devices": {
+   "value": {
+    "group": "hull",
+    "name": {
+     "el": "Συσκευές βελτίωσης πρόωσης",
+     "en": "Propulsion-improving devices"
+    },
+    "how": {
+     "el": "Ακροφύσια (ducts), πτερύγια πριν ή μετά την έλικα και πτερύγια στο κέντρο της (PBCF) που ανακτούν την ενέργεια της περιστροφής του νερού.",
+     "en": "Ducts, fins before or after the propeller and propeller-hub fins (PBCF) that recover the energy of the water's swirl."
+    },
+    "effect": {
+     "type": "resistance",
+     "value": {
+      "low": 0.025,
+      "likely": 0.055,
+      "high": 0.085
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 100000,
+     "likely": 350000,
+     "high": 1000000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_guide_2022",
+     "bouman_2017",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_guide_2022",
+   "status": "verified",
+   "note": "Pre-duct 5.5% ± 3% (GreenVoyage guide, GRIP data); Bouman (2017) propulsion efficiency devices 1–25%. CAPEX range assumed (DNV 2026: bow + propeller + PBCF together USD 2.35 million)."
+  },
+  "propeller_retrofit": {
+   "value": {
+    "group": "hull",
+    "name": {
+     "el": "Νέα έλικα για την πραγματική ταχύτητα",
+     "en": "Propeller retrofit for actual speed"
+    },
+    "how": {
+     "el": "Τα περισσότερα πλοία πλέουν πιο αργά από την ταχύτητα σχεδίασης· μια έλικα (και πλώρη) σχεδιασμένη για την πραγματική ταχύτητα δουλεύει πιο αποδοτικά.",
+     "en": "Most ships now sail slower than they were designed for; a propeller (and bow) designed for the actual speed works more efficiently."
+    },
+    "effect": {
+     "type": "resistance",
+     "value": {
+      "low": 0.02,
+      "likely": 0.04,
+      "high": 0.06
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 400000,
+     "likely": 600000,
+     "high": 850000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 15,
+     "likely": 15,
+     "high": 15
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_propeller",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_propeller",
+   "status": "verified",
+   "note": ""
+  },
+  "waste_heat_recovery": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Ανάκτηση θερμότητας καυσαερίων",
+     "en": "Waste heat recovery"
+    },
+    "how": {
+     "el": "Ατμοστρόβιλος, στρόβιλος ισχύος ή μονάδα ORC παράγει ηλεκτρισμό από τη θερμότητα των καυσαερίων της κύριας μηχανής, μέχρι ~6% της ισχύος της.",
+     "en": "A steam turbine, power turbine or ORC unit makes electricity from the main engine's exhaust heat, up to ~6% of its power."
+    },
+    "effect": {
+     "type": "whr",
+     "value": {
+      "low": 0.02,
+      "likely": 0.04,
+      "high": 0.06
+     }
+    },
+    "capex": {
+     "basis": "per_kw",
+     "low": 190,
+     "likely": 350,
+     "high": 520
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 10000,
+     "likely": 20000,
+     "high": 30000
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ],
+     "min_mcr_kw": 10000,
+     "retrofit": false
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_whr",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_whr",
+   "status": "verified",
+   "note": "Per-kW CAPEX from $5.2 million (≈10 MW) to $11.5 million (≈60 MW)."
+  },
+  "engine_tuning": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Ρύθμιση και συντήρηση μηχανής",
+     "en": "Engine tuning"
+    },
+    "how": {
+     "el": "Ρύθμιση έγχυσης, χρονισμού και στροβιλοσυμπιεστή για καλύτερη απόδοση στο φορτίο που πραγματικά λειτουργεί η μηχανή.",
+     "en": "Adjusting injection, timing and turbocharger for better efficiency at the load the engine really runs at."
+    },
+    "effect": {
+     "type": "me_energy",
+     "value": {
+      "low": 0.01,
+      "likely": 0.02,
+      "high": 0.03
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 4000,
+     "likely": 8000,
+     "high": 12000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 5,
+     "likely": 5,
+     "high": 5
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_tuning",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_tuning",
+   "status": "verified",
+   "note": ""
+  },
+  "engine_derating": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Αποδυνάμωση (de-rating) μηχανής",
+     "en": "Engine de-rating"
+    },
+    "how": {
+     "el": "Μόνιμη μείωση της μέγιστης ισχύος ώστε η μηχανή να λειτουργεί πιο αποδοτικά στη χαμηλή ταχύτητα. Η μέγιστη ταχύτητα πέφτει 10–15%.",
+     "en": "Permanently lowering maximum power so the engine runs more efficiently at low speed. Top speed falls 10–15%."
+    },
+    "effect": {
+     "type": "me_energy",
+     "value": {
+      "low": 0.02,
+      "likely": 0.04,
+      "high": 0.06
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 55000,
+     "likely": 1500000,
+     "high": 2500000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 7,
+     "likely": 8.5,
+     "high": 10
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "engine_tuning"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_derating",
+     "bouman_2017"
+    ]
+   },
+   "source": "gv_derating",
+   "status": "verified",
+   "note": ""
+  },
+  "battery_hybrid": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Μπαταρίες / υβριδικό σύστημα",
+     "en": "Batteries / hybrid"
+    },
+    "how": {
+     "el": "Οι μπαταρίες καλύπτουν αιχμές φορτίου ώστε οι μηχανές να δουλεύουν στο καλύτερο σημείο, και τροφοδοτούν το πλοίο στο λιμάνι. Ισχυρό για πορθμεία.",
+     "en": "Batteries cover load peaks so engines run at their best point, and power the ship in port. Strong for ferries."
+    },
+    "effect": {
+     "type": "battery",
+     "value": {
+      "low": 0.02,
+      "likely": 0.05,
+      "high": 0.12
+     },
+     "port_share": 0.3,
+     "battery_kwh_per_kw_aux": 1.0
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 500000,
+     "likely": 2000000,
+     "high": 5000000
+    },
+    "opex": {
+     "basis": "capex_share",
+     "low": 0.0,
+     "likely": 0.01,
+     "high": 0.02
+    },
+    "lifetime": {
+     "low": 8,
+     "likely": 10,
+     "high": 12
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 4,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_hybrid",
+     "bouman_2017"
+    ]
+   },
+   "source": "gv_hybrid",
+   "status": "verified",
+   "note": "Battery lifetime to be checked."
+  },
+  "shore_power": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Ηλεκτροδότηση από την ξηρά",
+     "en": "Shore power"
+    },
+    "how": {
+     "el": "Στο λιμάνι οι βοηθητικές μηχανές σβήνουν και το πλοίο παίρνει ρεύμα από την ξηρά. Υποχρεωτικό από το 2030 για πλοία εμπορευματοκιβωτίων και επιβατηγά σε μεγάλα λιμάνια της ΕΕ.",
+     "en": "At berth the auxiliary engines are switched off and the ship takes power from shore. Required from 2030 for container and passenger ships in major EU ports."
+    },
+    "effect": {
+     "type": "shore",
+     "value": {
+      "low": 0.5,
+      "likely": 0.8,
+      "high": 1.0
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 50000,
+     "likely": 600000,
+     "high": 2000000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 3,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_shore",
+     "bouman_2017"
+    ]
+   },
+   "source": "gv_shore",
+   "status": "verified",
+   "note": "Value = share of berth electricity taken from shore (depends on port availability)."
+  },
+  "aux_efficiency": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Αποδοτικές αντλίες, ανεμιστήρες και φωτισμός",
+     "en": "Efficient pumps, fans and lighting"
+    },
+    "how": {
+     "el": "Ρυθμιστές στροφών (VFD) σε αντλίες και ανεμιστήρες και φωτισμός LED μειώνουν την ηλεκτρική ζήτηση επί του πλοίου.",
+     "en": "Variable-speed drives on pumps and fans and LED lighting cut the electrical demand on board."
+    },
+    "effect": {
+     "type": "aux",
+     "value": {
+      "low": 0.02,
+      "likely": 0.08,
+      "high": 0.2
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 50000,
+     "likely": 150000,
+     "high": 400000
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "bouman_2017",
+     "imo4_q"
+    ]
+   },
+   "source": "bouman_2017",
+   "status": "verified",
+   "note": "Bouman (2017): on-board power demand 0.1–3% of total CO2, i.e. about 2–20% of the electrical demand. CAPEX assumed."
+  },
+  "steam_plant": {
+   "value": {
+    "group": "machinery",
+    "name": {
+     "el": "Βελτίωση λειτουργίας λεβήτων",
+     "en": "Steam plant improvements"
+    },
+    "how": {
+     "el": "Καλύτερη χρήση των λεβήτων (θέρμανση φορτίου, αντλίες εκφόρτωσης) σε δεξαμενόπλοια.",
+     "en": "Better use of the boilers (cargo heating, cargo pumps) on tankers."
+    },
+    "effect": {
+     "type": "boiler",
+     "value": {
+      "low": 0.1,
+      "likely": 0.2,
+      "high": 0.3
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 3000,
+     "likely": 5000,
+     "high": 8000
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "oil",
+      "chemical",
+      "other_liquids"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "gv_steam",
+     "imo4_q"
+    ]
+   },
+   "source": "gv_steam",
+   "status": "verified",
+   "note": ""
+  },
+  "rotor_sails": {
+   "value": {
+    "group": "wind",
+    "name": {
+     "el": "Περιστρεφόμενα πανιά (rotor sails)",
+     "en": "Rotor sails"
+    },
+    "how": {
+     "el": "Περιστρεφόμενοι κύλινδροι στο κατάστρωμα· ο άνεμος παράγει ώση (φαινόμενο Magnus). Ο αριθμός και το μέγεθός τους ακολουθούν το μέγεθος του πλοίου.",
+     "en": "Spinning cylinders on deck; the wind produces forward thrust (Magnus effect). Their number and size follow the ship's size."
+    },
+    "effect": {
+     "type": "wind",
+     "value": {
+      "tiers": [
+       {
+        "low": 30,
+        "likely": 170,
+        "high": 220
+       },
+       {
+        "low": 187,
+        "likely": 245,
+        "high": 282
+       },
+       {
+        "low": 267,
+        "likely": 637,
+        "high": 1222
+       }
+      ]
+     },
+     "area_factor": 1.0
+    },
+    "capex": {
+     "basis": "per_unit",
+     "tiers": [
+      {
+       "low": 819000.0,
+       "likely": 819000.0,
+       "high": 1173000.0
+      },
+      {
+       "low": 819000.0,
+       "likely": 1173000.0,
+       "high": 1527000.0
+      },
+      {
+       "low": 1173000.0,
+       "likely": 1527000.0,
+       "high": 1527000.0
+      }
+     ]
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 14000.0,
+     "likely": 20000.0,
+     "high": 25000.0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 2,
+     "likely": 5,
+     "high": 10
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "suction_wings",
+     "rigid_wings",
+     "kites"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.002
+    },
+    "refs": [
+     "emsa_wind",
+     "bouman_2017",
+     "imo4_q"
+    ],
+    "units": {
+     "bulk": {
+      "0": 0,
+      "10000": 1,
+      "60000": 2,
+      "100000": 4
+     },
+     "chemical": {
+      "0": 0,
+      "5000": 1,
+      "40000": 2
+     },
+     "container": {
+      "0": 0
+     },
+     "general_cargo": {
+      "0": 0,
+      "5000": 1,
+      "20000": 2
+     },
+     "gas": {
+      "0": 0,
+      "50000": 1,
+      "100000": 2,
+      "200000": 4
+     },
+     "oil": {
+      "0": 0,
+      "5000": 1,
+      "20000": 2,
+      "120000": 4
+     },
+     "other_liquids": {
+      "0": 0
+     },
+     "ferry_pax": {
+      "0": 0,
+      "2000": 1
+     },
+     "cruise": {
+      "0": 0,
+      "10000": 1,
+      "100000": 2
+     },
+     "ropax": {
+      "0": 0,
+      "5000": 1
+     },
+     "reefer": {
+      "0": 0,
+      "6000": 1
+     },
+     "roro": {
+      "0": 0,
+      "5000": 1,
+      "15000": 2
+     },
+     "vehicle": {
+      "0": 0,
+      "30000": 1
+     }
+    }
+   },
+   "source": "emsa_wind",
+   "status": "verified",
+   "note": "Value = average thrust power per rotor (kW, annual mean incl. unfavourable wind). Small: Annika Braren 18×3 m (2–4.5%), Afros 16×2 m (12.5% est.), Estraden 18×3 m (6.1%); medium: Sea Zhoushan 24×4 m (8%), Viking Grace 24×4 m (207–282 kW measured); large: Epanastasea 30×5 m (8.2%), Copenhagen 30×5 m (4%), SC Connector 35×5 m (20–25%, supplier). Percentages converted with the IMO class's main engine power at sea. Bouman (2017): wind 1–50%."
+  },
+  "suction_wings": {
+   "value": {
+    "group": "wind",
+    "name": {
+     "el": "Πτερύγια αναρρόφησης (suction wings)",
+     "en": "Suction wings"
+    },
+    "how": {
+     "el": "Σταθερά πτερύγια με ανεμιστήρα που αναρροφά τον αέρα από την επιφάνεια και αυξάνει την ώση. Καλύτερα σε πλάγιους ανέμους και χαμηλή ταχύτητα.",
+     "en": "Fixed wings with a fan that sucks air off the surface and boosts thrust. Best in side winds and at low speed."
+    },
+    "effect": {
+     "type": "wind",
+     "value": {
+      "tiers": [
+       {
+        "low": 19,
+        "likely": 28,
+        "high": 37
+       },
+       {
+        "low": 37,
+        "likely": 120,
+        "high": 200
+       },
+       {
+        "low": 100,
+        "likely": 200,
+        "high": 300
+       }
+      ]
+     },
+     "area_factor": 1.0
+    },
+    "capex": {
+     "basis": "per_unit",
+     "tiers": [
+      {
+       "low": 300000.0,
+       "likely": 300000.0,
+       "high": 805000.0
+      },
+      {
+       "low": 300000.0,
+       "likely": 805000.0,
+       "high": 1310000.0
+      },
+      {
+       "low": 805000.0,
+       "likely": 1310000.0,
+       "high": 1310000.0
+      }
+     ]
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 5000.0,
+     "likely": 13000.0,
+     "high": 21000.0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 1,
+     "likely": 3,
+     "high": 7
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "rotor_sails",
+     "rigid_wings",
+     "kites"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.001
+    },
+    "refs": [
+     "emsa_wind",
+     "bouman_2017"
+    ],
+    "units": {
+     "bulk": {
+      "0": 0,
+      "10000": 1,
+      "60000": 2,
+      "100000": 4
+     },
+     "chemical": {
+      "0": 0,
+      "5000": 1,
+      "40000": 2
+     },
+     "container": {
+      "0": 0
+     },
+     "general_cargo": {
+      "0": 0,
+      "5000": 1,
+      "20000": 2
+     },
+     "gas": {
+      "0": 0,
+      "50000": 1,
+      "100000": 2,
+      "200000": 4
+     },
+     "oil": {
+      "0": 0,
+      "5000": 1,
+      "20000": 2,
+      "120000": 4
+     },
+     "other_liquids": {
+      "0": 0
+     },
+     "ferry_pax": {
+      "0": 0,
+      "2000": 1
+     },
+     "cruise": {
+      "0": 0,
+      "10000": 1,
+      "100000": 2
+     },
+     "ropax": {
+      "0": 0,
+      "5000": 1
+     },
+     "reefer": {
+      "0": 0,
+      "6000": 1
+     },
+     "roro": {
+      "0": 0,
+      "5000": 1,
+      "15000": 2
+     },
+     "vehicle": {
+      "0": 0,
+      "30000": 1
+     }
+    }
+   },
+   "source": "emsa_wind",
+   "status": "verified",
+   "note": "Small: Frisian Sea 2 × 10 m (2–4% measured); medium and large: supplier figure of over 200 kW for one 10–16 m wing."
+  },
+  "rigid_wings": {
+   "value": {
+    "group": "wind",
+    "name": {
+     "el": "Άκαμπτα πανιά-πτέρυγες",
+     "en": "Rigid wing sails"
+    },
+    "how": {
+     "el": "Μεγάλα πτερύγια σαν φτερά αεροπλάνου, συχνά πτυσσόμενα. Μεγάλη ώση σε κατάλληλες διαδρομές.",
+     "en": "Large aeroplane-like wings, often foldable. Large thrust on suitable routes."
+    },
+    "effect": {
+     "type": "wind",
+     "value": {
+      "tiers": [
+       {
+        "low": 34,
+        "likely": 337,
+        "high": 558
+       },
+       {
+        "low": 34,
+        "likely": 429,
+        "high": 721
+       },
+       {
+        "low": 337,
+        "likely": 558,
+        "high": 1058
+       }
+      ]
+     },
+     "area_factor": 1.0
+    },
+    "capex": {
+     "basis": "per_unit",
+     "tiers": [
+      {
+       "low": 643000.0,
+       "likely": 643000.0,
+       "high": 959000.0
+      },
+      {
+       "low": 643000.0,
+       "likely": 959000.0,
+       "high": 1275000.0
+      },
+      {
+       "low": 959000.0,
+       "likely": 1275000.0,
+       "high": 1275000.0
+      }
+     ]
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 9000.0,
+     "likely": 15000.0,
+     "high": 21000.0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 3,
+     "likely": 7,
+     "high": 14
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "rotor_sails",
+     "suction_wings",
+     "kites"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 5,
+     "safety": 5,
+     "cargo_loss": 0.003
+    },
+    "refs": [
+     "emsa_wind",
+     "bouman_2017"
+    ],
+    "units": {
+     "bulk": {
+      "0": 0,
+      "10000": 1,
+      "60000": 2,
+      "100000": 4
+     },
+     "chemical": {
+      "0": 0,
+      "5000": 1,
+      "40000": 2
+     },
+     "container": {
+      "0": 0
+     },
+     "general_cargo": {
+      "0": 0,
+      "5000": 1,
+      "20000": 2
+     },
+     "gas": {
+      "0": 0,
+      "50000": 1,
+      "100000": 2,
+      "200000": 4
+     },
+     "oil": {
+      "0": 0,
+      "5000": 1,
+      "20000": 2,
+      "120000": 4
+     },
+     "other_liquids": {
+      "0": 0
+     },
+     "ferry_pax": {
+      "0": 0,
+      "2000": 1
+     },
+     "cruise": {
+      "0": 0,
+      "10000": 1,
+      "100000": 2
+     },
+     "ropax": {
+      "0": 0,
+      "5000": 1
+     },
+     "reefer": {
+      "0": 0,
+      "6000": 1
+     },
+     "roro": {
+      "0": 0,
+      "5000": 1,
+      "15000": 2
+     },
+     "vehicle": {
+      "0": 0,
+      "30000": 1
+     }
+    }
+   },
+   "source": "emsa_wind",
+   "status": "verified",
+   "note": "Tanker with five wing sails 2.6% (estimate); Shofu Maru, one sail, 5–8% (simulation); Ciudad de Mahón 2 × 35×12 m, 7–22% (15% realistic, simulation)."
+  },
+  "kites": {
+   "value": {
+    "group": "wind",
+    "name": {
+     "el": "Χαρταετός ρυμούλκησης",
+     "en": "Towing kite"
+    },
+    "how": {
+     "el": "Μεγάλος χαρταετός στην πλώρη που πετά ψηλά, όπου ο άνεμος είναι πιο δυνατός. Λιγότερο ώριμη τεχνολογία· δεν πιάνει χώρο στο κατάστρωμα.",
+     "en": "Large kite at the bow flying high, where the wind is stronger. Less mature; takes no deck space."
+    },
+    "effect": {
+     "type": "wind",
+     "value": {
+      "tiers": [
+       {
+        "low": 54,
+        "likely": 150,
+        "high": 400
+       },
+       {
+        "low": 54,
+        "likely": 271,
+        "high": 814
+       },
+       {
+        "low": 271,
+        "likely": 558,
+        "high": 866
+       }
+      ]
+     },
+     "area_factor": 1.0
+    },
+    "capex": {
+     "basis": "per_unit",
+     "tiers": [
+      {
+       "low": 502000.0,
+       "likely": 502000.0,
+       "high": 1948000.0
+      },
+      {
+       "low": 502000.0,
+       "likely": 1948000.0,
+       "high": 3394000.0
+      },
+      {
+       "low": 1948000.0,
+       "likely": 3394000.0,
+       "high": 3394000.0
+      }
+     ]
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 20000.0,
+     "likely": 77000.0,
+     "high": 135000.0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 1,
+     "likely": 3,
+     "high": 7
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "rotor_sails",
+     "suction_wings",
+     "rigid_wings"
+    ],
+    "attributes": {
+     "trl": 7,
+     "availability": 5,
+     "safety": 4,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "emsa_wind",
+     "bouman_2017",
+     "imo4_q"
+    ],
+    "units": {
+     "bulk": {
+      "0": 0,
+      "10000": 1
+     },
+     "chemical": {
+      "0": 0,
+      "5000": 1
+     },
+     "container": {
+      "0": 0,
+      "1000": 1
+     },
+     "general_cargo": {
+      "0": 0,
+      "5000": 1
+     },
+     "gas": {
+      "0": 0,
+      "50000": 1
+     },
+     "oil": {
+      "0": 0,
+      "5000": 1
+     },
+     "reefer": {
+      "0": 0,
+      "6000": 1
+     },
+     "roro": {
+      "0": 0,
+      "5000": 1
+     },
+     "vehicle": {
+      "0": 0,
+      "30000": 1
+     }
+    }
+   },
+   "source": "emsa_wind",
+   "status": "verified",
+   "note": "400 m² kite: 1–15% (CE Delft 2016, in EMSA); 375 m² on Ciudad de Mahón: 4–13% (9% realistic). One kite per ship."
+  },
+  "biofuel_blend": {
+   "value": {
+    "group": "fuel",
+    "name": {
+     "el": "Μείγμα βιοκαυσίμου B30",
+     "en": "Biofuel blend B30"
+    },
+    "how": {
+     "el": "30% βιοντίζελ (FAME) αναμεμειγμένο στο συμβατικό καύσιμο. Χωρίς επένδυση· το κόστος είναι η επιπλέον τιμή του καυσίμου.",
+     "en": "30% biodiesel (FAME) blended into the usual fuel. No investment; the cost is the fuel's price premium."
+    },
+    "effect": {
+     "type": "fuel",
+     "value": {
+      "low": 0.3,
+      "likely": 0.3,
+      "high": 0.3
+     },
+     "mix": {
+      "fame": 1.0
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "biofuel_b100",
+     "lng_dual_fuel",
+     "methanol_dual_fuel",
+     "ammonia_dual_fuel"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 3,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "dnv_mf2026",
+     "bouman_2017"
+    ]
+   },
+   "source": "dnv_mf2026",
+   "status": "verified",
+   "note": "Value = energy share of biofuel."
+  },
+  "biofuel_b100": {
+   "value": {
+    "group": "fuel",
+    "name": {
+     "el": "Βιοκαύσιμο B100 (HVO)",
+     "en": "Biofuel B100 (HVO)"
+    },
+    "how": {
+     "el": "Ανανεώσιμο ντίζελ (HVO) αντί για συμβατικό καύσιμο, χωρίς αλλαγές στη μηχανή.",
+     "en": "Renewable diesel (HVO) instead of fossil fuel, with no engine changes."
+    },
+    "effect": {
+     "type": "fuel",
+     "value": {
+      "low": 1.0,
+      "likely": 1.0,
+      "high": 1.0
+     },
+     "mix": {
+      "hvo": 1.0
+     }
+    },
+    "capex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "opex": {
+     "basis": "fixed",
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 0,
+     "likely": 0,
+     "high": 0
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "biofuel_blend",
+     "lng_dual_fuel",
+     "methanol_dual_fuel",
+     "ammonia_dual_fuel"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 2,
+     "safety": 5,
+     "cargo_loss": 0.0
+    },
+    "refs": [
+     "dnv_mf2026",
+     "bouman_2017"
+    ]
+   },
+   "source": "dnv_mf2026",
+   "status": "verified",
+   "note": "Variant of the biofuel measure."
+  },
+  "lng_dual_fuel": {
+   "value": {
+    "group": "fuel",
+    "name": {
+     "el": "Μετατροπή σε διπλού καυσίμου LNG",
+     "en": "LNG dual-fuel conversion"
+    },
+    "how": {
+     "el": "Μηχανή διπλού καυσίμου και δεξαμενές LNG. Μικρό όφελος με ορυκτό LNG λόγω διαφυγής μεθανίου· ανοίγει τον δρόμο για βιο-LNG και e-LNG.",
+     "en": "Dual-fuel engine and LNG tanks. Small gain on fossil LNG because of methane slip; opens the way to bio-LNG and e-LNG."
+    },
+    "effect": {
+     "type": "fuel",
+     "value": {
+      "low": 0.9,
+      "likely": 0.95,
+      "high": 0.98
+     },
+     "mix": {
+      "lng_otto_ss": 1.0
+     },
+     "engine": "ssd"
+    },
+    "capex": {
+     "basis": "per_kw",
+     "low": 400,
+     "likely": 700,
+     "high": 1000
+    },
+    "opex": {
+     "basis": "capex_share",
+     "low": 0.005,
+     "likely": 0.01,
+     "high": 0.015
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 30,
+     "likely": 60,
+     "high": 80
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "methanol_dual_fuel",
+     "ammonia_dual_fuel",
+     "biofuel_blend",
+     "biofuel_b100"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 4,
+     "safety": 4,
+     "cargo_loss": 0.02
+    },
+    "refs": [
+     "mmmczcs_2022",
+     "bwlpg_2020",
+     "bouman_2017",
+     "imo4_q"
+    ]
+   },
+   "source": "mmmczcs_2022",
+   "status": "verified",
+   "note": "Value = energy share on gas. CAPEX: LNG newbuild premium $24 million on a $150 million, ~60 MW ship (≈ $400/kW, MMMCZCS 2022) as the low end; BW Gemini LPG retrofit $9 million on a ~13 MW VLGC (≈ $700/kW, 60 days) as likely; high assumed. Bouman (2017): LNG 5–30%."
+  },
+  "methanol_dual_fuel": {
+   "value": {
+    "group": "fuel",
+    "name": {
+     "el": "Μετατροπή σε διπλού καυσίμου μεθανόλης",
+     "en": "Methanol dual-fuel conversion"
+    },
+    "how": {
+     "el": "Μετατροπή της μηχανής και νέες δεξαμενές για μεθανόλη. Όφελος μόνο με βιο- ή e-μεθανόλη.",
+     "en": "Engine conversion and new tanks for methanol. A gain only on bio- or e-methanol."
+    },
+    "effect": {
+     "type": "fuel",
+     "value": {
+      "low": 0.9,
+      "likely": 0.95,
+      "high": 0.98
+     },
+     "mix": {
+      "bio_methanol": 1.0
+     },
+     "engine": "ssd"
+    },
+    "capex": {
+     "basis": "per_kw",
+     "low": 225,
+     "likely": 300,
+     "high": 400
+    },
+    "opex": {
+     "basis": "capex_share",
+     "low": 0.005,
+     "likely": 0.01,
+     "high": 0.015
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 30,
+     "likely": 50,
+     "high": 80
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "lng_dual_fuel",
+     "ammonia_dual_fuel",
+     "biofuel_blend",
+     "biofuel_b100"
+    ],
+    "attributes": {
+     "trl": 9,
+     "availability": 3,
+     "safety": 4,
+     "cargo_loss": 0.03
+    },
+    "refs": [
+     "mmmczcs_2022",
+     "imo4_q"
+    ]
+   },
+   "source": "mmmczcs_2022",
+   "status": "verified",
+   "note": "CAPEX: 9–16% of a $150 million 15,000 TEU newbuild (~60 MW) ≈ $225–400/kW."
+  },
+  "ammonia_dual_fuel": {
+   "value": {
+    "group": "fuel",
+    "name": {
+     "el": "Μετατροπή σε διπλού καυσίμου αμμωνίας",
+     "en": "Ammonia dual-fuel conversion"
+    },
+    "how": {
+     "el": "Μηχανή αμμωνίας με ~5% πιλοτικό καύσιμο. Σχεδόν μηδενικός άνθρακας με πράσινη αμμωνία· νέα τεχνολογία και τοξικό καύσιμο.",
+     "en": "Ammonia engine with ~5% pilot fuel. Near-zero carbon with green ammonia; new technology and a toxic fuel."
+    },
+    "effect": {
+     "type": "fuel",
+     "value": {
+      "low": 0.93,
+      "likely": 0.95,
+      "high": 0.97
+     },
+     "mix": {
+      "e_ammonia": 1.0
+     },
+     "engine": "ssd"
+    },
+    "capex": {
+     "basis": "per_kw",
+     "low": 350,
+     "likely": 475,
+     "high": 600
+    },
+    "opex": {
+     "basis": "capex_share",
+     "low": 0.01,
+     "likely": 0.015,
+     "high": 0.02
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 40,
+     "likely": 60,
+     "high": 90
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [
+     "lng_dual_fuel",
+     "methanol_dual_fuel",
+     "biofuel_blend",
+     "biofuel_b100"
+    ],
+    "attributes": {
+     "trl": 7,
+     "availability": 1,
+     "safety": 2,
+     "cargo_loss": 0.06
+    },
+    "refs": [
+     "mmmczcs_2022",
+     "imo4_q"
+    ]
+   },
+   "source": "mmmczcs_2022",
+   "status": "verified",
+   "note": "CAPEX: 14–24% of a $150 million newbuild. Energy share 95% (pilot ~5% of heat, IMO study Q.2.7). N2O from ammonia engines not yet modelled."
+  },
+  "carbon_capture": {
+   "value": {
+    "group": "fuel",
+    "name": {
+     "el": "Δέσμευση άνθρακα επί του πλοίου",
+     "en": "Onboard carbon capture"
+    },
+    "how": {
+     "el": "Μονάδα χημικής απορρόφησης που δεσμεύει μέρος του CO2 των καυσαερίων και το αποθηκεύει υγροποιημένο για εκφόρτωση στο λιμάνι. Χρειάζεται επιπλέον καύσιμο και χώρο· σήμερα την αναγνωρίζει ουσιαστικά μόνο το EU ETS.",
+     "en": "A chemical-absorption unit that captures part of the exhaust CO2 and stores it liquefied for offloading in port. Needs extra fuel and space; today essentially only the EU ETS recognises it."
+    },
+    "effect": {
+     "type": "capture",
+     "value": {
+      "low": 0.15,
+      "likely": 0.35,
+      "high": 0.6
+     },
+     "energy_per_capture": 0.5,
+     "maintenance_share": 0.03
+    },
+    "capex": {
+     "basis": "per_t_captured",
+     "low": 0.0,
+     "likely": 1000.0,
+     "high": 1000.0
+    },
+    "opex": {
+     "basis": "per_t_captured",
+     "low": 0.0,
+     "likely": 0.0,
+     "high": 0.0
+    },
+    "lifetime": {
+     "low": 25,
+     "likely": 25,
+     "high": 25
+    },
+    "offhire_days": {
+     "low": 20,
+     "likely": 35,
+     "high": 60
+    },
+    "applies": {
+     "types": [
+      "*"
+     ]
+    },
+    "excludes": [],
+    "attributes": {
+     "trl": 7,
+     "availability": 2,
+     "safety": 3,
+     "cargo_loss": 0.02
+    },
+    "refs": [
+     "emsa_occ",
+     "dnv_mf2026"
+    ]
+   },
+   "source": "emsa_occ",
+   "status": "verified",
+   "note": "Capture over the operational profile 15–60% (chemical absorption, six EMSA case ships); fuel penalty 9–30%, modelled as 0.5 × capture rate. CAPEX €180 / 450 / 720 per tonne of CO2 treated a year; CO2 disposal €54 / 85.5 / 117 per tonne offloaded; maintenance 3% of CAPEX a year. Container ships lose up to 1–3% of capacity. TRL 7 (chemical absorption: pilots and first installations)."
+  }
+ }
+}

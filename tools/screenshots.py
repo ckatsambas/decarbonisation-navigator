@@ -57,6 +57,13 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     pv.position_step.recompute()
     app.processEvents()
     w.grab().save(str(out / f"step2-{lang}-{pal.name}.png"))
+    pv.next_btn.click()
+    app.processEvents()
+    opt = pv.options_step
+    row = next((i for i, r in enumerate(opt.rows) if r.m.key == "rotor_sails" and r.ok), 0)
+    opt.table.setCurrentCell(row, 1)
+    app.processEvents()
+    w.grab().save(str(out / f"step3-{lang}-{pal.name}.png"))
     w.new_project()                                   # a standard ship from the library
     pv = w.project_view
     pv.ship_step.set_mode("standard")

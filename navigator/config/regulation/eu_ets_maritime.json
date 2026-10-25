@@ -24,6 +24,16 @@
       "title": "EMSA THETIS-MRV public emission reports, reporting period 2024 (v253, generated 23/10/2026): CO2eq = CO2 + 28·CH4 + 265·N2O holds exactly for 12,976 of 12,976 ships reporting both gases",
       "url": "https://mrv.emsa.europa.eu/#public/emission-report",
       "checked": "2026-10-24"
+    },
+    "nea_2025": {
+      "title": "Dutch Emissions Authority (NEa), Newsletter ETS Maritime: biofuels and zero-rating (2025): sustainable biomass zero-rated under the EU ETS when it complies with Regulation 2015/757 and RED II (proof of sustainability)",
+      "url": "https://content.mailplus.nl/m6/docs/user503102155/1649/20250205___Newsletter_ETS_Maritime___biofuels_and_zero_rating_final.pdf",
+      "checked": "2026-10-25"
+    },
+    "dnv_mf2026": {
+      "title": "DNV (2026), Maritime Forecast to 2050: 'The EU ETS currently offers the only explicit incentive for OCCS'; FuelEU review by end-2027 to consider onboard carbon capture; EU ETS review proposal July 2026, agreement expected Q1 2027",
+      "url": "https://www.dnv.com/maritime/publications/maritime-forecast/",
+      "checked": "2026-10-25"
     }
   },
   "values": {
@@ -103,6 +113,21 @@
       "value": 2030,
       "source": "ec_faq",
       "note": "Island and outermost-region derogations apply until 31 December 2030. When a ship's EMSA-reported ETS emissions are below the rule-based figure, the observed ratio is applied up to this year and full coverage afterwards (docs/decisions/0004)."
+    },
+    "zero_rated_kinds": {
+      "value": [
+        "bio",
+        "rfnbo"
+      ],
+      "source": "nea_2025",
+      "status": "verify",
+      "note": "Sustainable biofuels confirmed; RFNBO zero-rating assumed (to verify against Delegated Regulation (EU) 2024/3214)."
+    },
+    "capture_credit": {
+      "value": true,
+      "source": "dnv_mf2026",
+      "status": "verify",
+      "note": "Captured CO2 delivered for permanent storage is assumed not to need allowances (DNV 2026; EMSA 2026 OCC study counts EU ETS allowance savings). Not credited under FuelEU or the IMO NZF. Can be switched off as a scenario."
     }
   }
 }
