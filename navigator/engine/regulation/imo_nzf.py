@@ -75,6 +75,19 @@ class NzfYear:
     cost_eur: float
 
 
+def tier_cost(gfi: float, energy_mj: float, base: float, direct: float, rules: NzfRules) -> tuple[float, float, float, float]:
+    """(tier 1 t, tier 2 t, surplus t, cost USD) for one year."""
+    tier1 = tier2 = surplus = 0.0
+    if gfi > base:
+        tier2 = (gfi - base) * energy_mj / 1e6
+        tier1 = (base - direct) * energy_mj / 1e6
+    elif gfi > direct:
+        tier1 = (gfi - direct) * energy_mj / 1e6
+    else:
+        surplus = (direct - gfi) * energy_mj / 1e6
+    return tier1, tier2, surplus, tier1 * rules.tier1_usd + tier2 * rules.tier2_usd - surplus * rules.surplus_usd
+
+
 def nzf_path(ship: Ship, emissions: Callable[[int], AnnualEmissions], mix: Callable[[int], F.FuelMix],
              years: range, scenario: str = "as_drafted", rules: NzfRules | None = None,
              fuels: dict[str, F.Fuel] | None = None, domestic_only: bool = False) -> list[NzfYear]:
@@ -90,14 +103,6 @@ def nzf_path(ship: Ship, emissions: Callable[[int], AnnualEmissions], mix: Calla
         m = mix(y)
         energy = F.fuel_tonnes(emissions(y).co2.total, m, fuels) * F.energy_per_t(m, fuels)
         gfi = F.intensity(m, fuels, rules.gwp)
-        tier1 = tier2 = surplus = 0.0
-        if gfi > base:
-            tier2 = (gfi - base) * energy / 1e6
-            tier1 = (base - direct) * energy / 1e6
-        elif gfi > direct:
-            tier1 = (gfi - direct) * energy / 1e6
-        else:
-            surplus = (direct - gfi) * energy / 1e6
-        usd = tier1 * rules.tier1_usd + tier2 * rules.tier2_usd - surplus * rules.surplus_usd
+        tier1, tier2, surplus, usd = tier_cost(gfi, energy, base, direct, rules)
         out.append(NzfYear(y, True, energy, gfi, base, direct, tier1, tier2, surplus, usd, usd * rules.eur_per_usd))
     return out

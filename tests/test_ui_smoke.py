@@ -129,3 +129,38 @@ def test_empty_database_shows_hint(qtbot, tmp_path):
     step = w.project_view.ship_step
     assert not step.empty.isHidden() and step.split.isHidden()
     w.close()
+
+
+def test_standard_ship_flow_and_reopen(win):
+    win.new_project()
+    pv = win.project_view
+    step = pv.ship_step
+    step.set_mode("standard")
+    pane = step.std_pane
+    pane.pick_preset("kamsarmax")
+    pane.use_btn.click()
+    assert win.state.has_ship and pv.next_btn.isEnabled()
+    assert pv.project.name == "Kamsarmax"
+    pv.next_btn.click()
+    pos = pv.position_step
+    assert pos.inputs.standard is not None and pos.inputs.cii_type.currentData() == "bulk"
+    assert pos.inputs.capacity.value() == 82_000
+    assert pos.results and pos.results[-1].total_eur > 0
+    pv.save_now()
+    pid = pv.project.id
+    win.show_lobby()
+    win.open_project(pid)
+    assert win.project_view.position_step.inputs.standard[0] == "bulk:60000-99999"
+
+
+def test_baseline_switch_changes_costs(win):
+    pv = start_with_ship(win)
+    pv.next_btn.click()
+    pos = pv.position_step
+    pos.base.picked.emit("pay")
+    pos.recompute()
+    pay = sum(r.total_eur for r in pos.results)
+    pos.base.picked.emit("least_cost")
+    pos.recompute()
+    assert sum(r.total_eur for r in pos.results) <= pay + 1e-6
+    assert {r.route for r in pos.results} <= {"none", "pay", "pool", "bio"}

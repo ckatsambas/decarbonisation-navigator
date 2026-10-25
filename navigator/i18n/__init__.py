@@ -61,6 +61,9 @@ def pick(texts: dict[str, str]) -> str:
 
 # ------------------------------------------------------------------ numbers
 def num(x: float, digits: int = 0) -> str:
+    """Number with the language's separators; negative `digits` rounds to tens, hundreds, thousands."""
+    if digits < 0:
+        x, digits = round(x, digits), 0
     s = f"{abs(x):,.{digits}f}"
     if _current == "el":                       # 1.234.567,89
         s = s.replace(",", " ").replace(".", ",").replace(" ", ".")

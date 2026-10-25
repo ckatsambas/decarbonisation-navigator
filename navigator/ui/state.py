@@ -12,6 +12,7 @@ class AppState(QObject):
     db_changed = Signal()
     ship_changed = Signal(object)          # mrv.ShipYear | None
     view_changed = Signal(str)             # "eu" | "ww"
+    standard_changed = Signal(object)      # (class key, pattern, capacity) | None
 
     def __init__(self, db_path: Path | None = None, bundle: Path | None | bool = None):
         """`bundle`: the packaged EU MRV database (default), another .xz file, or False for none."""
@@ -20,6 +21,7 @@ class AppState(QObject):
         self.db: mrv.MrvDatabase | None = None
         self.ship_year: mrv.ShipYear | None = None
         self.view = "eu"
+        self.standard = None
         self.bundle_status = "no-bundle"
         if bundle is not False:
             try:
@@ -38,8 +40,17 @@ class AppState(QObject):
         self.db_changed.emit()
 
     def use_ship(self, ship_year: mrv.ShipYear | None) -> None:
-        self.ship_year = ship_year
+        self.ship_year, self.standard = ship_year, None
         self.ship_changed.emit(ship_year)
+
+    def use_standard(self, std: tuple | None) -> None:
+        self.standard, self.ship_year = std, None
+        self.standard_changed.emit(std)
+        self.ship_changed.emit(None)
+
+    @property
+    def has_ship(self) -> bool:
+        return self.ship_year is not None or self.standard is not None
 
     def set_view(self, view: str) -> None:
         if view in ("eu", "ww") and view != self.view:

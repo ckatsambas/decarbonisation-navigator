@@ -86,7 +86,7 @@ def _norm(text: object) -> str:
     s = re.sub(r"\[.*?\]", "", s)          # drop units
     s = re.sub(r"\s+", " ", s).strip()
     s = re.sub(r"^annual average ", "", s)  # 2018–2023 wording
-    s = re.sub(r"^annual time spent at sea$", "time spent at sea", s)
+    s = re.sub(r"^(?:annual )?(?:total )?time spent at sea$", "time spent at sea", s)
     return s
 
 
@@ -486,10 +486,22 @@ class ShipYear:
         from ..engine.estimate import estimate_share
         from ..engine.regulation.cii import cii_type_for
         mix, _ = F.infer_mix(self.co2_per_fuel())
-        return Profile(ship=self.to_ship(), emissions=self.emissions(), fuel_mix=mix,
-                       cii_type=cii_type_for(self.get("ship_type")), capacity=0.0,
-                       distance_nm=self.get("distance_nm", 0.0), domestic_only=self.likely_domestic(),
-                       eu_share=estimate_share(self.get("ship_type"), self.get("time_at_sea")))
+        size = self.size_estimate()
+        cii_type = cii_type_for(self.get("ship_type"))
+        unit = size.details["unit"] if size else "dwt"
+        share = estimate_share(self.get("ship_type"), self.get("time_at_sea"), size.likely if size else None, unit,
+                               self.get("fuel_total"))
+        return Profile(ship=self.to_ship(), emissions=self.emissions(), fuel_mix=mix, cii_type=cii_type,
+                       capacity=size.likely if size else 0.0, distance_nm=self.get("distance_nm", 0.0),
+                       domestic_only=self.likely_domestic(), eu_share=share, size=size)
+
+    def size_estimate(self):
+        """Estimated capacity (DWT or GT, the unit CII uses for the type), or None."""
+        from ..engine.regulation.cii import cii_type_for
+        from ..engine.sizing import estimate_capacity
+        return estimate_capacity(self.get("ship_type"), cii_type_for(self.get("ship_type")), self.get("fuel_total"),
+                                 self.get("distance_nm"), self.get("time_at_sea"), self.get("tech_eff_type"),
+                                 self.get("tech_eff_value"))
 
     def to_ship(self) -> Ship:
         ets = self.ets_reported_co2e

@@ -10,7 +10,7 @@ from .pages.position import StepPosition, StepUpcoming
 from .pages.ship import StepShip
 from .state import AppState
 from .stepper import RouteStepper
-from .widgets import amp, label
+from .widgets import amp, label, size_label
 
 STEP_KEYS = ["step.1", "step.2", "step.3", "step.4", "step.5", "step.6"]
 
@@ -75,6 +75,7 @@ class ProjectView(QWidget):
         self._save_timer.timeout.connect(self.save_now)
         self.stepper.picked.connect(self.go)
         self.ship_step.detail.chosen.connect(self._ship_chosen)
+        state.standard_changed.connect(self._standard_chosen)
         self.position_step.computed.connect(self._dirty)
         state.ship_changed.connect(lambda _: self._refresh_nav())
         state.view_changed.connect(lambda _: self._dirty())
@@ -91,10 +92,13 @@ class ProjectView(QWidget):
                 inputs.restore(project.inputs, self.state.db)
             else:
                 inputs.reset_example()
-            self.state.ship_year = inputs.loaded
+            self.state.ship_year, self.state.standard = inputs.loaded, inputs.standard
             self.state.ship_changed.emit(None)          # refresh buttons without reloading inputs
             if inputs.loaded is not None:
+                self.ship_step.set_mode("mrv")
                 self.ship_step.show_imo(inputs.loaded.imo)
+            elif inputs.standard is not None:
+                self.ship_step.set_mode("standard")
             self.position_step.recompute()
             self.current = 0
             self.go(min(project.step, project.reached), save=False)
@@ -114,6 +118,10 @@ class ProjectView(QWidget):
         p.view = self.state.view
         y = inputs.loaded
         p.ship = {"imo": y.imo, "year": y.year, "name": y.get("name", ""), "type": y.get("ship_type", "")} if y else None
+        if inputs.standard:
+            from ..engine import reference as R
+            c = R.by_key(inputs.standard[0])
+            p.ship = {"imo": "", "year": 2018, "name": self.ship_step.std_pane.name, "type": f"{c.label} {size_label(c)}"}
         p.summary = self.position_step.summary()
         p.step, p.reached = self.current, max(p.reached, self.current)
         self.store.save(p)
@@ -132,8 +140,15 @@ class ProjectView(QWidget):
         self._refresh_nav()
         self._dirty()
 
+    def _standard_chosen(self, std) -> None:
+        if self.project is not None and not self.project.name and std is not None:
+            self.project.name = self.ship_step.std_pane.name
+            self.name_changed.emit(self.project.name)
+        self._refresh_nav()
+        self._dirty()
+
     def can_continue(self) -> bool:
-        return self.current != 0 or self.state.ship_year is not None
+        return self.current != 0 or self.state.has_ship
 
     def _continue(self) -> None:
         if self.current == len(self.steps) - 1:

@@ -6,9 +6,9 @@ import math
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QButtonGroup, QGridLayout, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from ...engine.compliance import YEARS, Rules, evaluate
+from ...engine.compliance import BASELINES, YEARS, Rules, evaluate
 from ...engine.regulation.imo_nzf import SCENARIOS
-from ...i18n import eur_short, pct, tr
+from ...i18n import eur_short, num, pct, tr
 from .. import theme
 from ..charts import StackedBarChart
 from ..widgets import Fold, Panel, ReadMore, TrLabel, amp, label
@@ -84,13 +84,18 @@ class StepPosition(Page):
         sc.setVerticalSpacing(6)
         sc.addWidget(TrLabel("pos.price", "SectionTitle"), 0, 0)
         sc.addWidget(TrLabel("pos.nzf", "SectionTitle"), 0, 1)
+        sc.addWidget(TrLabel("pos.baseline", "SectionTitle"), 0, 2)
         self.price = Choice([("low", "pos.price.low"), ("central", "pos.price.central"), ("high", "pos.price.high")])
         self.nzf = Choice([(s, f"nzf.short.{s}") for s in SCENARIOS])
+        self.base = Choice([(b, f"base.short.{b}") for b in BASELINES])
         sc.addWidget(self.price, 1, 0, Qt.AlignmentFlag.AlignLeft)
         sc.addWidget(self.nzf, 1, 1, Qt.AlignmentFlag.AlignLeft)
+        sc.addWidget(self.base, 1, 2, Qt.AlignmentFlag.AlignLeft)
         sc.addWidget(ReadMore("pos.price.more"), 2, 0)
         sc.addWidget(ReadMore("in.nzf.more"), 2, 1)
-        sc.setColumnStretch(2, 1)
+        self.base_more = ReadMore("pos.baseline.more", pool="", premium="")
+        sc.addWidget(self.base_more, 2, 2)
+        sc.setColumnStretch(3, 1)
         self.lay.addLayout(sc)
 
         # --- four numbers
@@ -107,6 +112,10 @@ class StepPosition(Page):
         cap.addWidget(self.cap_label)
         cap.addWidget(self.capacity)
         self.n_cii.body.addLayout(cap)
+        self.size_note = TrLabel("pos.size.estimated", "Estimate", wrap=True)
+        self.n_cii.body.addWidget(self.size_note)
+        self.size_more = ReadMore("pos.size.more", low="", likely="", high="", unit="", method="")
+        self.n_cii.body.addWidget(self.size_more)
         for n in (self.n_total, self.n_2030, self.n_2035, self.n_cii):
             nums.addWidget(n, 1)
         self.lay.addLayout(nums)
@@ -141,10 +150,12 @@ class StepPosition(Page):
 
         self.price.picked.connect(self._pick_price)
         self.nzf.picked.connect(lambda v: self.inputs.nzf.select(v))
+        self.base.picked.connect(lambda v: self.inputs.baseline.select(v))
         self.capacity.valueChanged.connect(lambda v: self.inputs.capacity.setValue(v))
         self.inputs.changed.connect(self.recompute)
         if state is not None:
             state.ship_changed.connect(self.inputs.load_ship)
+            state.standard_changed.connect(self.inputs.load_standard)
             state.view_changed.connect(lambda _: self.recompute())
         self.recompute()
 
@@ -157,6 +168,17 @@ class StepPosition(Page):
         cur = {y: s.value() for y, s in self.inputs.prices.items()}
         self.price.set_value(next((k for k, p in PRICE_PATHS.items() if p == cur), None))
         self.nzf.set_value(self.inputs.nzf.currentData())
+        self.base.set_value(self.inputs.baseline.currentData())
+        mk = self.rules.markets
+        self.base_more.set_key("pos.baseline.more", pool=num(mk.pool_price.likely), premium=num(mk.bio_premium.likely))
+        e = self.inputs.size_estimate
+        self.size_note.setVisible(e is not None)
+        self.size_more.setVisible(e is not None)
+        if e is not None:
+            unit = e.details.get("unit", "dwt").upper()
+            self.size_note.set_key("pos.size.confirm" if e.method == "type" else "pos.size.estimated")
+            self.size_more.set_key("pos.size.more", low=num(e.low, -3), likely=num(e.likely, -3), high=num(e.high, -3),
+                                   unit=unit, method=tr(f"size.method.{e.method}"))
         self.capacity.blockSignals(True)
         self.capacity.setLocale(self.inputs.capacity.locale())
         self.capacity.setValue(self.inputs.capacity.value())
@@ -191,6 +213,10 @@ class StepPosition(Page):
         nzf_total = sum(max(x.nzf.cost_eur, 0) for x in self.results)
         ship = self.inputs.loaded.get("name") if self.inputs.loaded else tr("pos.example_ship")
         year = self.inputs.loaded.year if self.inputs.loaded else 2025
+        if self.inputs.standard:
+            from ...engine import reference as R
+            ship = R.by_key(self.inputs.standard[0]).label
+            year = 2018
         key = "pos.sentence.nzf" if nzf_total > 0 else "pos.sentence"
         self.sentence.setText(tr(key, ship=ship, year=year, a=eur_short(r[2026].total_eur),
                                  b=eur_short(r[2035].total_eur), total=eur_short(total),
@@ -198,7 +224,7 @@ class StepPosition(Page):
         p = theme.current()
         years = [x.year for x in self.results]
         self.chart.set_data(years, [(tr("legend.ets_cost"), [x.ets.cost for x in self.results], p.ets),
-                                    (tr("legend.fueleu"), [x.fueleu.penalty for x in self.results], p.fueleu),
+                                    (tr("legend.fueleu"), [x.fueleu_cost for x in self.results], p.fueleu),
                                     (tr("legend.nzf"), [max(x.nzf.cost_eur, 0) for x in self.results], p.imo)])
         self.computed.emit()
 
@@ -218,6 +244,7 @@ class StepPosition(Page):
     def on_language(self) -> None:
         self.price.retranslate()
         self.nzf.retranslate()
+        self.base.retranslate()
         self.inputs.retranslate()
         self.out.retranslate()
         self.recompute()

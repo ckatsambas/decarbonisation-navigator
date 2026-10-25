@@ -18,8 +18,8 @@ undergraduate thesis at the University of West Attica.
 | 0.5 | EU MRV ship database (2018–2025), Ship page, ETS validated against EMSA | done |
 | 1 | FuelEU Maritime, IMO NZF scenarios, CII, combined timeline, EU/WW views | done (v0.1.0) |
 | 1.5 | Guided interface: lobby, projects, six-step route, nautical-chart design | done |
-| 2 | Ship-type library, ship size estimate, probabilistic worldwide estimate | next |
-| 3 | Technology & fuel library with sourced ranges | planned |
+| 2 | Ship-type library, ship size estimate, probabilistic worldwide estimate, least-cost baseline | done |
+| 3 | Technology & fuel library with sourced ranges | next |
 | 4 | Weighting (BWM, AHP, entropy, CRITIC), ranking (SAW, TOPSIS, PROMETHEE II, VIKOR), SMAA-2 | planned |
 | 5 | Bundles and timing (mixed-integer optimisation), fleets, FuelEU pooling, group decisions, reports | planned |
 

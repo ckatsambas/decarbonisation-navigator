@@ -13,3 +13,4 @@ and what follows from it. These notes are the raw material for thesis chapter 6
 | [0005](0005-regimes-and-worldwide-scope.md) | FuelEU, IMO NZF and CII engines; EU/WW views with (a)(b)(c) worldwide estimate |
 | [0006](0006-guided-interface.md) | Guided interface: lobby, six-step route, nautical-chart identity |
 | [0007](0007-phase2-plan.md) | Phase 2 plan: ship size, worldwide range, PERT uncertainty, baselines, validation |
+| [0008](0008-estimation-methods.md) | Estimation methods: size (EEDI + fuel per hour + type range), EU share, PERT, least-cost baseline, standard ships |

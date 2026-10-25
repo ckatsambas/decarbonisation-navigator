@@ -1,0 +1,64 @@
+{
+  "name": "markets",
+  "title": {
+    "el": "Τιμές αγοράς για τη συμμόρφωση",
+    "en": "Market prices for compliance"
+  },
+  "sources": {
+    "oceanscore_aug26": {
+      "title": "OceanScore Pool-Price Index market commentary, August 2026: FuelEU pool price €118.90/t CO2e (offers €110–170); March 2026 ≈ €200; October 2026 €95.80",
+      "url": "https://oceanscore.com/insights/oceanscore-pool-price-index-market-commentary-august-2026/",
+      "checked": "2026-10-25"
+    },
+    "indexbox_2025": {
+      "title": "IndexBox, FuelEU Maritime pool prices: 2025 surplus at €219/t CO2e",
+      "url": "https://www.indexbox.io/blog/fueleu-maritime-pool-prices-rebound-2025-surplus-hits-219-eurton-co2e/",
+      "checked": "2026-10-25"
+    },
+    "engine_oct26": {
+      "title": "ENGINE via Hellenic Shipping News, Biofuel Bunker Snapshot 12 Oct 2026: Rotterdam B100 $1,185/t, B30-VLSFO premium $191/t (implies ≈ $640/t B100 premium over VLSFO)",
+      "url": "https://www.hellenicshippingnews.com/biofuel-bunker-snapshot-rotterdams-b30-vlsfo-premium-over-vlsfo-narrows-sharply/",
+      "checked": "2026-10-25"
+    },
+    "engine_sep26": {
+      "title": "ENGINE, Fuel Switch Snapshot 8 Sep 2026: Rotterdam B100 at a $45/t discount to VLSFO on an energy-equivalent basis",
+      "url": "https://www.engine.online/news/fuel-switch-snapshot-rotterdam-biofuels-slide-as-other-fuels-climb-8108",
+      "checked": "2026-10-25"
+    },
+    "assume": {
+      "title": "Modelling assumption of this application; documented in docs/decisions/0008",
+      "checked": "2026-10-25"
+    }
+  },
+  "values": {
+    "pool_price_eur": {
+      "value": {
+        "low": 96,
+        "likely": 119,
+        "high": 220
+      },
+      "source": "oceanscore_aug26",
+      "note": "€ per t CO2e of FuelEU compliance surplus bought from a pool. Low: Oct 2026; likely: Aug 2026 index; high: 2025 surplus peak (IndexBox)."
+    },
+    "bio_premium_usd": {
+      "value": {
+        "low": 0,
+        "likely": 640,
+        "high": 1000
+      },
+      "source": "engine_oct26",
+      "status": "verify",
+      "note": "$ per t of B100 (FAME/UCOME) above VLSFO. Likely: Oct 2026 Rotterdam; low: Sep 2026 energy-adjusted parity; high: assumption for tight feedstock markets."
+    },
+    "bio_fuel": {
+      "value": "fame",
+      "source": "assume",
+      "note": "Biofuel used for least-cost blending: B100 FAME (UCOME), the most traded marine biofuel."
+    },
+    "bio_ets_zero_rated": {
+      "value": true,
+      "source": "assume",
+      "note": "Sustainable biofuels meeting RED criteria carry a zero emission factor in the EU ETS; blending reduces ETS emissions by the fossil energy replaced."
+    }
+  }
+}
