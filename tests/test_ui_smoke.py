@@ -1,6 +1,5 @@
 """Lobby → new project → choose ship → today's position → save → reopen."""
 import pytest
-from PySide6.QtCore import Qt
 
 pytest.importorskip("pytestqt")
 
@@ -181,7 +180,7 @@ def test_options_step_lists_measures_and_keeps_shortlist(win):
     assert len(ok) >= 18 and all(r.app is not None for r in ok)
     assert not next(r for r in opt.rows if r.m.key == "steam_plant").ok        # tankers only
     rotor = next(i for i, r in enumerate(opt.rows) if r.m.key == "rotor_sails")
-    opt.table.item(rotor, 0).setCheckState(Qt.CheckState.Checked)
+    opt.set_ticked(opt.rows[rotor].m.key, True)
     assert opt.shortlist == {"rotor_sails"}
     opt.rate.picked.emit("0.10")
     assert opt.settings()["rate"] == pytest.approx(0.10)
@@ -204,7 +203,7 @@ def test_priorities_and_decision_with_smaa(win, qtbot):
     opt = pv.options_step
     for key in ("hull_coating", "rotor_sails", "biofuel_b100"):
         i = next(i for i, r in enumerate(opt.rows) if r.m.key == key)
-        opt.table.item(i, 0).setCheckState(Qt.CheckState.Checked)
+        opt.set_ticked(opt.rows[i].m.key, True)
     pv.next_btn.click()
     pri = pv.priorities_step
     assert len(opt.alternatives()) == 4                        # three measures + do nothing

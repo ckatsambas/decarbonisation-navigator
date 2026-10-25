@@ -8,8 +8,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -69,7 +67,7 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     for key in ("rotor_sails", "hull_coating", "propulsion_devices", "biofuel_blend", "methanol_dual_fuel"):
         i = next((i for i, r in enumerate(opt.rows) if r.m.key == key and r.ok), None)
         if i is not None:
-            opt.table.item(i, 0).setCheckState(Qt.CheckState.Checked)
+            opt.set_ticked(opt.rows[i].m.key, True)
     pv.next_btn.click()
     pri = pv.priorities_step
     fam = pri.levels["families"].bwm

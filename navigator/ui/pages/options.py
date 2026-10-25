@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
@@ -158,7 +159,6 @@ class StepOptions(Page):
 
         for c in (self.start, self.life, self.prices, self.rate):
             c.picked.connect(lambda v, c=c: (c.set_value(v), self.recompute()))
-        self.table.itemChanged.connect(self._ticked)
         self.table.currentCellChanged.connect(lambda r, *_: self._show(r))
         position.computed.connect(self.recompute)
         self.table.setHorizontalHeaderLabels([tr(k) if k else "" for k in COLS])
@@ -250,13 +250,19 @@ class StepOptions(Page):
         self.table.setRowCount(len(self.rows))
         p = theme.current()
         for i, r in enumerate(self.rows):
-            tick = QTableWidgetItem()
+            self.table.setItem(i, 0, QTableWidgetItem())
             if r.ok:
-                tick.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                tick.setCheckState(Qt.CheckState.Checked if r.m.key in self.shortlist else Qt.CheckState.Unchecked)
+                box = QCheckBox()
+                box.setChecked(r.m.key in self.shortlist)
+                box.toggled.connect(lambda on, k=r.m.key: self.set_ticked(k, on))
+                cell = QWidget()
+                cl = QHBoxLayout(cell)
+                cl.setContentsMargins(6, 0, 6, 0)
+                cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                cl.addWidget(box)
+                self.table.setCellWidget(i, 0, cell)
             else:
-                tick.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.table.setItem(i, 0, tick)
+                self.table.removeCellWidget(i, 0)
             name = QTableWidgetItem(pick(r.m.name))
             name.setToolTip(tr(f"group.{r.m.group}"))
             self.table.setItem(i, 1, name)
@@ -287,14 +293,12 @@ class StepOptions(Page):
             self.table.setCurrentCell(row, 1)
             self._show(row)
 
-    def _ticked(self, item: QTableWidgetItem) -> None:
-        if self._filling or item.column() != 0:
-            return
-        r = self.rows[item.row()]
-        if item.checkState() == Qt.CheckState.Checked:
-            self.shortlist.add(r.m.key)
+    def set_ticked(self, key: str, on: bool) -> None:
+        """Add a measure to the shortlist for steps 4–5 (or remove it)."""
+        if on:
+            self.shortlist.add(key)
         else:
-            self.shortlist.discard(r.m.key)
+            self.shortlist.discard(key)
         self._summary()
         self.changed.emit()
 
