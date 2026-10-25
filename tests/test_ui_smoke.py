@@ -1,5 +1,6 @@
 """Lobby → new project → choose ship → today's position → save → reopen."""
 import pytest
+from PySide6.QtCore import Qt
 
 pytest.importorskip("pytestqt")
 
@@ -164,3 +165,29 @@ def test_baseline_switch_changes_costs(win):
     pos.recompute()
     assert sum(r.total_eur for r in pos.results) <= pay + 1e-6
     assert {r.route for r in pos.results} <= {"none", "pay", "pool", "bio"}
+
+
+def test_options_step_lists_measures_and_keeps_shortlist(win):
+    win.new_project()
+    pv = win.project_view
+    pv.ship_step.set_mode("standard")
+    pv.ship_step.std_pane.pick_preset("kamsarmax")
+    pv.ship_step.std_pane.use_btn.click()
+    pv.next_btn.click()
+    pv.next_btn.click()
+    assert pv.current == 2
+    opt = pv.options_step
+    ok = [r for r in opt.rows if r.ok]
+    assert len(ok) >= 18 and all(r.app is not None for r in ok)
+    assert not next(r for r in opt.rows if r.m.key == "steam_plant").ok        # tankers only
+    rotor = next(i for i, r in enumerate(opt.rows) if r.m.key == "rotor_sails")
+    opt.table.item(rotor, 0).setCheckState(Qt.CheckState.Checked)
+    assert opt.shortlist == {"rotor_sails"}
+    opt.rate.picked.emit("0.10")
+    assert opt.settings()["rate"] == pytest.approx(0.10)
+    pv.save_now()
+    pid = pv.project.id
+    win.show_lobby()
+    win.open_project(pid)
+    opt = win.project_view.options_step
+    assert opt.shortlist == {"rotor_sails"} and opt.settings()["rate"] == pytest.approx(0.10)

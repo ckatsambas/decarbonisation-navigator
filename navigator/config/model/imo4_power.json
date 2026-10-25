@@ -1,0 +1,1109 @@
+{
+ "name": "imo4_power",
+ "title": {
+  "el": "Μοντέλο ισχύος της Τέταρτης Μελέτης GHG του IMO",
+  "en": "Power model of the Fourth IMO GHG Study"
+ },
+ "sources": {
+  "imo4": {
+   "title": "Fourth IMO GHG Study 2020, Section 2.2 (bottom-up method): Eq. 8 Admiralty formula, Eq. 9–11 fuel consumption, Table 17 auxiliary engine and boiler power, Table 19 SFC base; Annex L weather and fouling factors",
+   "url": "https://www.imo.org/en/ourwork/Environment/Pages/Fourth-IMO-Greenhouse-Gas-Study-2020.aspx",
+   "checked": "2026-10-25"
+  },
+  "imo3": {
+   "title": "Third IMO GHG Study 2014, Section 2: main engine SFC load correction SFC = SFCbase × (0.455·L² − 0.710·L + 1.280), reused by the Fourth Study (Eq. 10)",
+   "url": "https://www.imo.org/en/ourwork/Environment/Pages/Greenhouse-Gas-Studies-2014.aspx",
+   "checked": "2026-10-25"
+  }
+ },
+ "values": {
+  "speed_exponent": {
+   "value": 3,
+   "source": "imo4"
+  },
+  "draught_exponent": {
+   "value": 0.66,
+   "source": "imo4"
+  },
+  "fouling_factor": {
+   "value": 0.917,
+   "source": "imo4",
+   "note": "9% resistance penalty for hull fouling"
+  },
+  "weather_factor": {
+   "value": {
+    "default": 0.867,
+    "coastal": 0.909,
+    "coastal_classes": [
+     "bulk:0-9999",
+     "chemical:0-4999",
+     "chemical:5000-9999",
+     "container:0-999",
+     "general_cargo:0-4999",
+     "general_cargo:5000-9999",
+     "oil:0-4999",
+     "oil:5000-9999",
+     "ferry_pax:0-299",
+     "ferry_pax:300-999",
+     "ferry_pax:1000-1999",
+     "ferry_pax:2000-+",
+     "cruise:0-1999",
+     "ropax:0-1999",
+     "ropax:2000-4999",
+     "ropax:5000-9999",
+     "ropax:10000-19999",
+     "ropax:20000-+",
+     "roro:0-4999",
+     "tug:0-+"
+    ]
+   },
+   "source": "imo4",
+   "note": "15% (ocean-going) or 10% (small, coastal) added power for weather"
+  },
+  "speed_power_correction": {
+   "value": {
+    "container:14500-19999": 0.75,
+    "container:20000-+": 0.75,
+    "cruise:*": 0.7
+   },
+   "source": "imo4",
+   "note": "δw: reported speed relates to ~75% MCR (large container) or diesel-electric layouts (cruise)"
+  },
+  "sfc_load_curve": {
+   "value": [
+    0.455,
+    -0.71,
+    1.28
+   ],
+   "source": "imo3",
+   "note": "SFC multiplier a·L² + b·L + c; minimum near 80% MCR"
+  },
+  "max_load": {
+   "value": 0.98,
+   "source": "imo4"
+  },
+  "sfc_base": {
+   "value": {
+    "main_ssd": {
+     "hfo": 175,
+     "mdo": 165,
+     "methanol": 350,
+     "lng_otto_ss": 148,
+     "lng_diesel_ss": 135
+    },
+    "main_msd": {
+     "hfo": 185,
+     "mdo": 175,
+     "methanol": 370,
+     "lng_otto_ms": 156,
+     "lng_lbsi": 156
+    },
+    "aux": {
+     "hfo": 195,
+     "mdo": 185,
+     "lng": 156
+    },
+    "boiler": {
+     "hfo": 340,
+     "mdo": 320,
+     "lng": 285
+    }
+   },
+   "source": "imo4",
+   "note": "g/kWh, engines built 2001 or later (Table 19). Boilers use the steam-turbine values; methanol at 19.9 MJ/kg"
+  },
+  "pilot_mdo_g_kwh": {
+   "value": {
+    "lng_otto_ss": 0.8,
+    "lng_diesel_ss": 6.0
+   },
+   "source": "imo4"
+  },
+  "aux_boiler_kw": {
+   "value": {
+    "bulk:0-9999": {
+     "boiler_kw": {
+      "berth": 70,
+      "anchored": 70,
+      "manoeuvring": 60,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 110,
+      "anchored": 180,
+      "manoeuvring": 500,
+      "sea": 190
+     }
+    },
+    "bulk:10000-34999": {
+     "boiler_kw": {
+      "berth": 70,
+      "anchored": 70,
+      "manoeuvring": 60,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 110,
+      "anchored": 180,
+      "manoeuvring": 500,
+      "sea": 190
+     }
+    },
+    "bulk:35000-59999": {
+     "boiler_kw": {
+      "berth": 130,
+      "anchored": 130,
+      "manoeuvring": 120,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 150,
+      "anchored": 250,
+      "manoeuvring": 680,
+      "sea": 260
+     }
+    },
+    "bulk:60000-99999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 260,
+      "manoeuvring": 240,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 240,
+      "anchored": 400,
+      "manoeuvring": 1100,
+      "sea": 410
+     }
+    },
+    "bulk:100000-199999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 260,
+      "manoeuvring": 240,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 240,
+      "anchored": 400,
+      "manoeuvring": 1100,
+      "sea": 410
+     }
+    },
+    "bulk:200000-+": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 260,
+      "manoeuvring": 240,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 240,
+      "anchored": 400,
+      "manoeuvring": 1100,
+      "sea": 410
+     }
+    },
+    "chemical:0-4999": {
+     "boiler_kw": {
+      "berth": 670,
+      "anchored": 160,
+      "manoeuvring": 130,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 110,
+      "anchored": 170,
+      "manoeuvring": 190,
+      "sea": 200
+     }
+    },
+    "chemical:5000-9999": {
+     "boiler_kw": {
+      "berth": 670,
+      "anchored": 160,
+      "manoeuvring": 130,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 330,
+      "anchored": 490,
+      "manoeuvring": 560,
+      "sea": 580
+     }
+    },
+    "chemical:10000-19999": {
+     "boiler_kw": {
+      "berth": 1000,
+      "anchored": 240,
+      "manoeuvring": 200,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 330,
+      "anchored": 490,
+      "manoeuvring": 560,
+      "sea": 580
+     }
+    },
+    "chemical:20000-39999": {
+     "boiler_kw": {
+      "berth": 1350,
+      "anchored": 320,
+      "manoeuvring": 270,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 790,
+      "anchored": 550,
+      "manoeuvring": 900,
+      "sea": 660
+     }
+    },
+    "chemical:40000-+": {
+     "boiler_kw": {
+      "berth": 1350,
+      "anchored": 320,
+      "manoeuvring": 270,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 790,
+      "anchored": 550,
+      "manoeuvring": 900,
+      "sea": 660
+     }
+    },
+    "container:0-999": {
+     "boiler_kw": {
+      "berth": 250,
+      "anchored": 250,
+      "manoeuvring": 240,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 370,
+      "anchored": 450,
+      "manoeuvring": 790,
+      "sea": 410
+     }
+    },
+    "container:1000-1999": {
+     "boiler_kw": {
+      "berth": 340,
+      "anchored": 340,
+      "manoeuvring": 310,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 820,
+      "anchored": 910,
+      "manoeuvring": 1750,
+      "sea": 900
+     }
+    },
+    "container:2000-2999": {
+     "boiler_kw": {
+      "berth": 460,
+      "anchored": 450,
+      "manoeuvring": 430,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 610,
+      "anchored": 910,
+      "manoeuvring": 1900,
+      "sea": 920
+     }
+    },
+    "container:3000-4999": {
+     "boiler_kw": {
+      "berth": 480,
+      "anchored": 480,
+      "manoeuvring": 430,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1100,
+      "anchored": 1350,
+      "manoeuvring": 2500,
+      "sea": 1400
+     }
+    },
+    "container:5000-7999": {
+     "boiler_kw": {
+      "berth": 590,
+      "anchored": 580,
+      "manoeuvring": 550,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1100,
+      "anchored": 1400,
+      "manoeuvring": 2800,
+      "sea": 1450
+     }
+    },
+    "container:8000-11999": {
+     "boiler_kw": {
+      "berth": 620,
+      "anchored": 620,
+      "manoeuvring": 540,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1150,
+      "anchored": 1600,
+      "manoeuvring": 2900,
+      "sea": 1800
+     }
+    },
+    "container:12000-14499": {
+     "boiler_kw": {
+      "berth": 630,
+      "anchored": 630,
+      "manoeuvring": 630,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1300,
+      "anchored": 1800,
+      "manoeuvring": 3250,
+      "sea": 2050
+     }
+    },
+    "container:14500-19999": {
+     "boiler_kw": {
+      "berth": 630,
+      "anchored": 630,
+      "manoeuvring": 630,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1400,
+      "anchored": 1950,
+      "manoeuvring": 3600,
+      "sea": 2300
+     }
+    },
+    "container:20000-+": {
+     "boiler_kw": {
+      "berth": 700,
+      "anchored": 700,
+      "manoeuvring": 700,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1400,
+      "anchored": 1950,
+      "manoeuvring": 3600,
+      "sea": 2300
+     }
+    },
+    "general_cargo:0-4999": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 90,
+      "anchored": 50,
+      "manoeuvring": 180,
+      "sea": 60
+     }
+    },
+    "general_cargo:5000-9999": {
+     "boiler_kw": {
+      "berth": 110,
+      "anchored": 110,
+      "manoeuvring": 100,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 240,
+      "anchored": 130,
+      "manoeuvring": 490,
+      "sea": 180
+     }
+    },
+    "general_cargo:10000-19999": {
+     "boiler_kw": {
+      "berth": 150,
+      "anchored": 150,
+      "manoeuvring": 130,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 720,
+      "anchored": 370,
+      "manoeuvring": 1450,
+      "sea": 520
+     }
+    },
+    "general_cargo:20000-+": {
+     "boiler_kw": {
+      "berth": 150,
+      "anchored": 150,
+      "manoeuvring": 130,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 720,
+      "anchored": 370,
+      "manoeuvring": 1450,
+      "sea": 520
+     }
+    },
+    "gas:0-49999": {
+     "boiler_kw": {
+      "berth": 1000,
+      "anchored": 200,
+      "manoeuvring": 200,
+      "sea": 100
+     },
+     "aux_kw": {
+      "berth": 240,
+      "anchored": 240,
+      "manoeuvring": 360,
+      "sea": 240
+     }
+    },
+    "gas:50000-99999": {
+     "boiler_kw": {
+      "berth": 1000,
+      "anchored": 200,
+      "manoeuvring": 200,
+      "sea": 100
+     },
+     "aux_kw": {
+      "berth": 1700,
+      "anchored": 1700,
+      "manoeuvring": 2600,
+      "sea": 1700
+     }
+    },
+    "gas:100000-199999": {
+     "boiler_kw": {
+      "berth": 1500,
+      "anchored": 300,
+      "manoeuvring": 300,
+      "sea": 150
+     },
+     "aux_kw": {
+      "berth": 2500,
+      "anchored": 2000,
+      "manoeuvring": 2300,
+      "sea": 2650
+     }
+    },
+    "gas:200000-+": {
+     "boiler_kw": {
+      "berth": 3000,
+      "anchored": 600,
+      "manoeuvring": 600,
+      "sea": 300
+     },
+     "aux_kw": {
+      "berth": 6750,
+      "anchored": 7200,
+      "manoeuvring": 7200,
+      "sea": 6750
+     }
+    },
+    "oil:0-4999": {
+     "boiler_kw": {
+      "berth": 500,
+      "anchored": 100,
+      "manoeuvring": 100,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 250,
+      "anchored": 250,
+      "manoeuvring": 375,
+      "sea": 250
+     }
+    },
+    "oil:5000-9999": {
+     "boiler_kw": {
+      "berth": 750,
+      "anchored": 150,
+      "manoeuvring": 150,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 375,
+      "anchored": 375,
+      "manoeuvring": 560,
+      "sea": 375
+     }
+    },
+    "oil:10000-19999": {
+     "boiler_kw": {
+      "berth": 1250,
+      "anchored": 250,
+      "manoeuvring": 250,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 690,
+      "anchored": 500,
+      "manoeuvring": 580,
+      "sea": 490
+     }
+    },
+    "oil:20000-59999": {
+     "boiler_kw": {
+      "berth": 2700,
+      "anchored": 270,
+      "manoeuvring": 270,
+      "sea": 270
+     },
+     "aux_kw": {
+      "berth": 720,
+      "anchored": 520,
+      "manoeuvring": 600,
+      "sea": 510
+     }
+    },
+    "oil:60000-79999": {
+     "boiler_kw": {
+      "berth": 3250,
+      "anchored": 360,
+      "manoeuvring": 360,
+      "sea": 280
+     },
+     "aux_kw": {
+      "berth": 620,
+      "anchored": 490,
+      "manoeuvring": 770,
+      "sea": 560
+     }
+    },
+    "oil:80000-119999": {
+     "boiler_kw": {
+      "berth": 4000,
+      "anchored": 400,
+      "manoeuvring": 400,
+      "sea": 280
+     },
+     "aux_kw": {
+      "berth": 800,
+      "anchored": 640,
+      "manoeuvring": 910,
+      "sea": 690
+     }
+    },
+    "oil:120000-199999": {
+     "boiler_kw": {
+      "berth": 6500,
+      "anchored": 500,
+      "manoeuvring": 500,
+      "sea": 300
+     },
+     "aux_kw": {
+      "berth": 2500,
+      "anchored": 770,
+      "manoeuvring": 1300,
+      "sea": 860
+     }
+    },
+    "oil:200000-+": {
+     "boiler_kw": {
+      "berth": 7000,
+      "anchored": 600,
+      "manoeuvring": 600,
+      "sea": 300
+     },
+     "aux_kw": {
+      "berth": 2500,
+      "anchored": 770,
+      "manoeuvring": 1300,
+      "sea": 860
+     }
+    },
+    "other_liquids:0-999": {
+     "boiler_kw": {
+      "berth": 1000,
+      "anchored": 200,
+      "manoeuvring": 200,
+      "sea": 100
+     },
+     "aux_kw": {
+      "berth": 500,
+      "anchored": 500,
+      "manoeuvring": 750,
+      "sea": 500
+     }
+    },
+    "other_liquids:1000-+": {
+     "boiler_kw": {
+      "berth": 1000,
+      "anchored": 200,
+      "manoeuvring": 200,
+      "sea": 100
+     },
+     "aux_kw": {
+      "berth": 500,
+      "anchored": 500,
+      "manoeuvring": 750,
+      "sea": 500
+     }
+    },
+    "ferry_pax:0-299": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 190,
+      "anchored": 190,
+      "manoeuvring": 190,
+      "sea": 190
+     }
+    },
+    "ferry_pax:300-999": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 190,
+      "anchored": 190,
+      "manoeuvring": 190,
+      "sea": 190
+     }
+    },
+    "ferry_pax:1000-1999": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 190,
+      "anchored": 190,
+      "manoeuvring": 190,
+      "sea": 190
+     }
+    },
+    "ferry_pax:2000-+": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 520,
+      "anchored": 520,
+      "manoeuvring": 520,
+      "sea": 520
+     }
+    },
+    "cruise:0-1999": {
+     "boiler_kw": {
+      "berth": 1100,
+      "anchored": 950,
+      "manoeuvring": 980,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 450,
+      "anchored": 450,
+      "manoeuvring": 580,
+      "sea": 450
+     }
+    },
+    "cruise:2000-9999": {
+     "boiler_kw": {
+      "berth": 1100,
+      "anchored": 950,
+      "manoeuvring": 980,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 450,
+      "anchored": 450,
+      "manoeuvring": 580,
+      "sea": 450
+     }
+    },
+    "cruise:10000-59999": {
+     "boiler_kw": {
+      "berth": 1100,
+      "anchored": 950,
+      "manoeuvring": 980,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 3500,
+      "anchored": 3500,
+      "manoeuvring": 5500,
+      "sea": 3500
+     }
+    },
+    "cruise:60000-99999": {
+     "boiler_kw": {
+      "berth": 1100,
+      "anchored": 950,
+      "manoeuvring": 980,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 11500,
+      "anchored": 11500,
+      "manoeuvring": 14900,
+      "sea": 11500
+     }
+    },
+    "cruise:100000-149999": {
+     "boiler_kw": {
+      "berth": 1100,
+      "anchored": 950,
+      "manoeuvring": 980,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 11500,
+      "anchored": 11500,
+      "manoeuvring": 14900,
+      "sea": 11500
+     }
+    },
+    "cruise:150000-+": {
+     "boiler_kw": {
+      "berth": 1100,
+      "anchored": 950,
+      "manoeuvring": 980,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 11500,
+      "anchored": 11500,
+      "manoeuvring": 14900,
+      "sea": 11500
+     }
+    },
+    "ropax:0-1999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 250,
+      "manoeuvring": 170,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 105,
+      "anchored": 105,
+      "manoeuvring": 105,
+      "sea": 105
+     }
+    },
+    "ropax:2000-4999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 250,
+      "manoeuvring": 170,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 330,
+      "anchored": 330,
+      "manoeuvring": 330,
+      "sea": 330
+     }
+    },
+    "ropax:5000-9999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 250,
+      "manoeuvring": 170,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 670,
+      "anchored": 670,
+      "manoeuvring": 670,
+      "sea": 670
+     }
+    },
+    "ropax:10000-19999": {
+     "boiler_kw": {
+      "berth": 390,
+      "anchored": 380,
+      "manoeuvring": 260,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1100,
+      "anchored": 1100,
+      "manoeuvring": 1100,
+      "sea": 1100
+     }
+    },
+    "ropax:20000-+": {
+     "boiler_kw": {
+      "berth": 390,
+      "anchored": 380,
+      "manoeuvring": 260,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1950,
+      "anchored": 1950,
+      "manoeuvring": 1950,
+      "sea": 1950
+     }
+    },
+    "reefer:0-1999": {
+     "boiler_kw": {
+      "berth": 270,
+      "anchored": 270,
+      "manoeuvring": 270,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 520,
+      "anchored": 570,
+      "manoeuvring": 560,
+      "sea": 570
+     }
+    },
+    "reefer:2000-5999": {
+     "boiler_kw": {
+      "berth": 270,
+      "anchored": 270,
+      "manoeuvring": 270,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1100,
+      "anchored": 1200,
+      "manoeuvring": 1150,
+      "sea": 1200
+     }
+    },
+    "reefer:6000-9999": {
+     "boiler_kw": {
+      "berth": 270,
+      "anchored": 270,
+      "manoeuvring": 270,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1500,
+      "anchored": 1650,
+      "manoeuvring": 1600,
+      "sea": 1650
+     }
+    },
+    "reefer:10000-+": {
+     "boiler_kw": {
+      "berth": 270,
+      "anchored": 270,
+      "manoeuvring": 270,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 2850,
+      "anchored": 3100,
+      "manoeuvring": 3000,
+      "sea": 3100
+     }
+    },
+    "roro:0-4999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 250,
+      "manoeuvring": 170,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 750,
+      "anchored": 430,
+      "manoeuvring": 1300,
+      "sea": 430
+     }
+    },
+    "roro:5000-9999": {
+     "boiler_kw": {
+      "berth": 260,
+      "anchored": 250,
+      "manoeuvring": 170,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1100,
+      "anchored": 680,
+      "manoeuvring": 2100,
+      "sea": 680
+     }
+    },
+    "roro:10000-14999": {
+     "boiler_kw": {
+      "berth": 390,
+      "anchored": 380,
+      "manoeuvring": 260,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1200,
+      "anchored": 950,
+      "manoeuvring": 2700,
+      "sea": 950
+     }
+    },
+    "roro:15000-+": {
+     "boiler_kw": {
+      "berth": 390,
+      "anchored": 380,
+      "manoeuvring": 260,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 1200,
+      "anchored": 950,
+      "manoeuvring": 2700,
+      "sea": 950
+     }
+    },
+    "vehicle:0-29999": {
+     "boiler_kw": {
+      "berth": 310,
+      "anchored": 300,
+      "manoeuvring": 250,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 800,
+      "anchored": 500,
+      "manoeuvring": 1100,
+      "sea": 500
+     }
+    },
+    "vehicle:30000-49999": {
+     "boiler_kw": {
+      "berth": 310,
+      "anchored": 300,
+      "manoeuvring": 250,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 850,
+      "anchored": 550,
+      "manoeuvring": 1400,
+      "sea": 510
+     }
+    },
+    "vehicle:50000-+": {
+     "boiler_kw": {
+      "berth": 310,
+      "anchored": 300,
+      "manoeuvring": 250,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 850,
+      "anchored": 550,
+      "manoeuvring": 1400,
+      "sea": 510
+     }
+    },
+    "yacht:0-+": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 130,
+      "anchored": 130,
+      "manoeuvring": 130,
+      "sea": 130
+     }
+    },
+    "tug:0-+": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 100,
+      "anchored": 80,
+      "manoeuvring": 210,
+      "sea": 80
+     }
+    },
+    "fishing:0-+": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 200,
+      "anchored": 200,
+      "manoeuvring": 200,
+      "sea": 200
+     }
+    },
+    "offshore:0-+": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 320,
+      "anchored": 320,
+      "manoeuvring": 320,
+      "sea": 320
+     }
+    },
+    "service_other:0-+": {
+     "boiler_kw": {
+      "berth": 0,
+      "anchored": 0,
+      "manoeuvring": 0,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 220,
+      "anchored": 220,
+      "manoeuvring": 220,
+      "sea": 220
+     }
+    },
+    "misc_other:0-+": {
+     "boiler_kw": {
+      "berth": 110,
+      "anchored": 110,
+      "manoeuvring": 90,
+      "sea": 0
+     },
+     "aux_kw": {
+      "berth": 150,
+      "anchored": 150,
+      "manoeuvring": 430,
+      "sea": 410
+     }
+    }
+   },
+   "source": "imo4",
+   "note": "Table 17; phases at berth, anchored, manoeuvring, at sea. Vehicle-carrier rows mapped by order to the GT classes. Cruise 100–150k GT sea value printed '115,00' read as 11,500"
+  }
+ }
+}

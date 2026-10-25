@@ -159,6 +159,9 @@ QToolButton#Fold {{ border: none; border-top: 1px solid {p.border}; background: 
   font-size: 9.5pt; font-weight: 600; padding: 12px 0 6px 0; text-align: left; }}
 QToolButton#Fold:hover, QToolButton#Fold:checked {{ color: {p.accent}; }}
 #Estimate {{ color: {p.warn}; font-size: 8.5pt; }}
+#Warn {{ color: {p.bad}; font-size: 9.5pt; }}
+#DetailTitle {{ font-size: 14pt; font-weight: 700; color: {p.text}; }}
+#FactValue {{ color: {p.text}; font-size: 9.5pt; }}
 #Warning {{ background: {p.panel_alt}; border-left: 3px solid {p.warn}; border-radius: 3px; padding: 8px 12px; }}
 QCheckBox {{ spacing: 8px; }}
 QCheckBox::indicator {{ width: 15px; height: 15px; border: 1px solid {p.faint}; border-radius: 3px; background: {p.panel_alt}; }}

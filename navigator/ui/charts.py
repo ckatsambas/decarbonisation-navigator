@@ -119,3 +119,43 @@ class NumberAxis(pg.AxisItem):
         if top >= 1e4:
             return [num(v / 1e3, 0) + "k" for v in values]
         return [num(v, 0) for v in values]
+
+
+class CashFlowChart(pg.PlotWidget):
+    """Yearly net cash flow (bars above or below zero) and the running total (line)."""
+
+    def __init__(self):
+        super().__init__(axisItems={"left": MoneyAxis("left"), "bottom": YearAxis("bottom")})
+        self.setMinimumHeight(220)
+        self.setMenuEnabled(False)
+        self.setMouseEnabled(x=False, y=False)
+        self.hideButtons()
+        self.legend = None
+        style_plot(self)
+
+    def set_data(self, years: list[int], flows: list[float], labels: tuple[str, str]) -> None:
+        self.clear()
+        if self.legend is None:
+            self.legend = self.addLegend(offset=(8, 4), colCount=2)
+        self.legend.clear()
+        p = theme.current()
+        self.legend.setLabelTextColor(p.muted)
+        if not years:
+            return
+        pos = [max(v, 0) for v in flows]
+        neg = [min(v, 0) for v in flows]
+        self.addItem(pg.BarGraphItem(x=years, height=pos, width=0.66, brush=QColor(p.good), pen=pg.mkPen(None),
+                                     name=labels[0]))
+        self.addItem(pg.BarGraphItem(x=years, height=neg, width=0.66, brush=QColor(p.bad), pen=pg.mkPen(None)))
+        cum, run = [], 0.0
+        for v in flows:
+            run += v
+            cum.append(run)
+        self.plot(years, cum, pen=pg.mkPen(p.accent, width=2), name=labels[1])
+        lo, hi = min(min(neg), min(cum), 0), max(max(pos), max(cum), 1)
+        self.setXRange(years[0] - 0.7, years[-1] + 0.7, padding=0)
+        self.setYRange(lo * 1.1, hi * 1.1, padding=0)
+        self.addLine(y=0, pen=pg.mkPen(p.faint, width=1))
+
+    def restyle(self) -> None:
+        style_plot(self)

@@ -15,6 +15,7 @@ Baselines (decision 0007-5):
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -88,6 +89,22 @@ class Scenario:
 
 
 @dataclass(frozen=True)
+class YearState:
+    """The ship in one year after measures (decision 0009): what each regime sees.
+
+    `emissions` are physical tank-to-wake emissions in EU scope (FuelEU, IMO, CII read the fuel and
+    energy from them); `ets_emissions` are what is surrendered under the EU ETS (sustainable biofuel
+    and RFNBO zero-rated, credited capture removed); `mix` is the mass mix of fuels burnt.
+    """
+    emissions: AnnualEmissions
+    ets_emissions: AnnualEmissions
+    mix: F.FuelMix
+
+
+ShipPath = Callable[[int], YearState]
+
+
+@dataclass(frozen=True)
 class YearResult:
     year: int
     ets: EtsYear
@@ -110,24 +127,28 @@ def worldwide_factor(profile: Profile, scenario: Scenario) -> float:
     return 1 / max(profile.eu_share.share, 0.01)
 
 
-def evaluate(profile: Profile, scenario: Scenario, years: range = YEARS, rules: Rules | None = None) -> list[YearResult]:
+def evaluate(profile: Profile, scenario: Scenario, years: range = YEARS, rules: Rules | None = None,
+             path: ShipPath | None = None) -> list[YearResult]:
+    """All regimes year by year; `path` gives the ship after measures (None = as reported every year)."""
     rules = rules or Rules.load()
-    em_eu = profile.emissions
-    em_imo = em_eu
-    if scenario.view == "ww" and profile.eu_share is not None:
-        em_imo = to_worldwide(em_eu, profile.eu_share.share)
+    base = YearState(profile.emissions, profile.emissions, profile.fuel_mix)
+    state = path or (lambda _y: base)
+    ww = scenario.view == "ww" and profile.eu_share is not None
 
-    def mix(_y):
-        return profile.fuel_mix
+    def imo(y: int) -> AnnualEmissions:
+        em = state(y).emissions
+        return to_worldwide(em, profile.eu_share.share) if ww else em
 
-    ets = cost_path(profile.ship, em_eu, scenario.eua, years, rules.ets)
-    fe = fueleu_path(profile.ship, lambda _y: em_eu, mix, years, rules.fueleu, rules.fuels)
-    nz = nzf_path(profile.ship, lambda _y: em_imo, mix, years, scenario.nzf, rules.nzf, rules.fuels,
-                  profile.domestic_only)
+    def mix(y: int) -> F.FuelMix:
+        return state(y).mix
+
+    ets = cost_path(profile.ship, lambda y: state(y).ets_emissions, scenario.eua, years, rules.ets)
+    fe = fueleu_path(profile.ship, lambda y: state(y).emissions, mix, years, rules.fueleu, rules.fuels)
+    nz = nzf_path(profile.ship, imo, mix, years, scenario.nzf, rules.nzf, rules.fuels, profile.domestic_only)
     cii: list[CiiYear | None] = [None] * len(years)
     if profile.cii_type and profile.capacity > 0 and profile.distance_nm > 0:
         f = worldwide_factor(profile, scenario)
-        cii = cii_path(profile.cii_type, profile.capacity, em_imo.co2.total, profile.distance_nm * f,
+        cii = cii_path(profile.cii_type, profile.capacity, lambda y: imo(y).co2.total, profile.distance_nm * f,
                        years, rules.cii)
     if scenario.baseline == "pay":
         return [YearResult(y, a, b, c, d, "pay" if b.penalty > 0 else "none", b.penalty)
