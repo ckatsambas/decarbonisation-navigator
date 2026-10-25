@@ -22,3 +22,8 @@ The thesis is written in Greek; the software is bilingual (Greek default, Englis
 - After changing the ETS engine or the importer, rerun `tools/validate_ets.py` and commit
   the updated `docs/validation/` report.
 - Run `python -m pytest` and `ruff check navigator tests tools` before every push.
+
+## Follow-ups (read at the start of every session)
+`docs/FOLLOW-UPS.md` lists items that must be revisited (IMO vote of 4 December 2026, Phase 4
+re-work, open data items; thesis deadline April 2027). Remind the author when an item is due,
+and tick items off when done.
