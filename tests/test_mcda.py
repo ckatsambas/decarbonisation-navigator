@@ -103,3 +103,8 @@ def test_smaa_outputs_are_probabilities(sim):
     assert r.values["npv"][:, 0].std() > 0
     fixed = S.run(s, True, w, n=500, uncertain_inputs=False)
     assert fixed.values["npv"][:, 0].std() == pytest.approx(0, abs=1e-6)
+
+
+def test_selftest_entry_point():
+    from navigator.__main__ import selftest
+    assert selftest() == 0

@@ -36,6 +36,15 @@ jobs:
         run: python -m pytest -q
       - name: Build
         run: pyinstaller --noconfirm navigator.spec
+      - name: Self-test the packaged program (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist/DecarbonisationNavigator.exe -ArgumentList "--selftest" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "self-test failed with exit code $($p.ExitCode)" }
+      - name: Self-test the packaged program (macOS)
+        if: runner.os == 'macOS'
+        run: '"dist/Decarbonisation Navigator.app/Contents/MacOS/Decarbonisation Navigator" --selftest'
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
