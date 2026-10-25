@@ -1,4 +1,4 @@
-"""Ship page: search the EU MRV database, inspect a ship's history, send it to the analysis."""
+"""Step 1 · Ship: find the ship in EU MRV, check it, confirm its size."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -29,7 +29,7 @@ from ...i18n import num, tr
 from .. import theme
 from ..charts import StackedBarChart
 from ..state import AppState
-from ..widgets import Kpi, Panel, TrLabel, amp, label
+from ..widgets import Fold, Kpi, Panel, TrLabel, amp, label
 from .base import Page
 
 LIMIT = 500
@@ -47,13 +47,13 @@ class ResultsModel(QAbstractTableModel):
         self.rows = rows
         self.endResetModel()
 
-    def rowCount(self, parent=QModelIndex()):  # noqa: B008
+    def rowCount(self, parent=QModelIndex()):  # noqa: B008, N802
         return 0 if parent.isValid() else len(self.rows)
 
-    def columnCount(self, parent=QModelIndex()):  # noqa: B008
+    def columnCount(self, parent=QModelIndex()):  # noqa: B008, N802
         return len(self.KEYS)
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):  # noqa: N802
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return tr(self.KEYS[section])
         return None
@@ -69,6 +69,7 @@ class ResultsModel(QAbstractTableModel):
         self.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(self.KEYS) - 1)
 
 
+# ============================================================================ EU MRV import
 class ImportWorker(QObject):
     progress = Signal(int, int, str)
     finished = Signal(object)             # list[ImportResult] | Exception
@@ -84,8 +85,54 @@ class ImportWorker(QObject):
             self.finished.emit(e)
 
 
+class MrvImporter(QObject):
+    """Import newer EMSA files from a folder, with a progress dialog (used from the lobby)."""
+
+    def __init__(self, parent: QWidget, state: AppState):
+        super().__init__(parent)
+        self.parent_widget, self.state = parent, state
+
+    def choose_and_import(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self.parent_widget, tr("import.choose"))
+        if folder:
+            self.import_files(sorted(Path(folder).glob("*.xlsx")))
+
+    def import_files(self, files: list[Path]) -> None:
+        if not files:
+            QMessageBox.information(self.parent_widget, tr("import.title"), tr("import.none"))
+            return
+        dlg = QProgressDialog(tr("import.title"), None, 0, len(files), self.parent_widget)
+        dlg.setWindowTitle(tr("import.title"))
+        dlg.setMinimumDuration(0)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        if self.state.db is not None:          # release the read-only handle while writing
+            self.state.db.close()
+            self.state.db = None
+        self._thread = QThread(self)
+        self._worker = ImportWorker(files, self.state.db_path)
+        self._worker.moveToThread(self._thread)
+        self._thread.started.connect(self._worker.run)
+        self._worker.progress.connect(lambda i, n, f: (dlg.setValue(i), dlg.setLabelText(tr("import.progress", file=f))))
+        self._worker.finished.connect(lambda res: self._done(res, dlg))
+        self._worker.finished.connect(self._thread.quit)
+        self._thread.start()
+
+    def _done(self, result, dlg: QProgressDialog) -> None:
+        dlg.close()
+        self.state.reopen()
+        if isinstance(result, Exception):
+            QMessageBox.warning(self.parent_widget, tr("import.title"), tr("import.error", error=str(result)))
+            return
+        done = sum(not r.skipped for r in result)
+        QMessageBox.information(self.parent_widget, tr("import.title"),
+                                tr("import.done", n=done, skipped=len(result) - done))
+
+
+# ============================================================================ ship card
 class ShipDetail(QWidget):
-    """Identity, latest-year figures, history chart and table for one ship."""
+    """The selected ship: identity and latest figures; full history folded underneath."""
+
+    chosen = Signal(object)                  # mrv.ShipYear
 
     def __init__(self, state: AppState):
         super().__init__()
@@ -108,13 +155,13 @@ class ShipDetail(QWidget):
         self.info = QWidget()
         info = QVBoxLayout(self.info)
         info.setContentsMargins(0, 0, 0, 0)
-        info.setSpacing(10)
+        info.setSpacing(12)
         head.body.addWidget(self.info)
         self.form = QFormLayout()
         self.form.setHorizontalSpacing(18)
         self.form.setVerticalSpacing(4)
         self.fields: dict[str, tuple[TrLabel, object]] = {}
-        for key in ("type", "company", "registry", "ice", "tech", "methods"):
+        for key in ("type", "company", "registry", "ice"):
             lab, val = TrLabel(f"ship.field.{key}", "Muted"), label("")
             val.setWordWrap(True)
             val.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -126,20 +173,33 @@ class ShipDetail(QWidget):
         self.k_co2 = Kpi("ship.kpi.co2", year="")
         self.k_fuel = Kpi("ship.kpi.fuel")
         self.k_dist = Kpi("ship.kpi.distance")
-        self.k_sea = Kpi("ship.kpi.sea")
-        self.k_ets = Kpi("ship.kpi.ets")
-        for i, k in enumerate((self.k_co2, self.k_fuel, self.k_dist, self.k_sea, self.k_ets)):
+        for i, k in enumerate((self.k_co2, self.k_fuel, self.k_dist)):
             kg.addWidget(k, 0, i)
             kg.setColumnStretch(i, 1)
         info.addLayout(kg)
-        info.addWidget(TrLabel("ship.mrv_note", "Faint", wrap=True))
-        v.addWidget(head)
 
-        self.chart_panel = Panel("ship.chart.title")
+        self.details = Fold("ship.details")
+        more = QFormLayout()
+        more.setHorizontalSpacing(18)
+        more.setVerticalSpacing(4)
+        for key in ("tech", "methods"):
+            lab, val = TrLabel(f"ship.field.{key}", "Muted"), label("")
+            val.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            more.addRow(lab, val)
+            self.fields[key] = (lab, val)
+        self.k_sea = Kpi("ship.kpi.sea")
+        self.k_ets = Kpi("ship.kpi.ets")
+        km = QGridLayout()
+        km.setHorizontalSpacing(24)
+        km.addWidget(self.k_sea, 0, 0)
+        km.addWidget(self.k_ets, 0, 1)
+        self.details.body_layout.addLayout(more)
+        self.details.body_layout.addLayout(km)
+        self.details.body_layout.addWidget(TrLabel("ship.mrv_note", "Faint", wrap=True))
+        cp = Panel("ship.chart.title")
         self.chart = StackedBarChart()
-        self.chart_panel.body.addWidget(self.chart)
-        v.addWidget(self.chart_panel)
-
+        cp.body.addWidget(self.chart)
+        self.details.body_layout.addWidget(cp)
         self.table = QTableWidget(0, 8)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
@@ -148,7 +208,10 @@ class ShipDetail(QWidget):
         hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         hh.setStretchLastSection(True)
         self.table.setMinimumHeight(250)
-        v.addWidget(self.table)
+        self.details.body_layout.addWidget(self.table)
+        info.addWidget(self.details)
+        v.addWidget(head)
+        v.addStretch(1)
         self.state.ship_changed.connect(lambda _: self._update_button())
 
     def show_ship(self, imo: str | None) -> None:
@@ -158,14 +221,13 @@ class ShipDetail(QWidget):
 
     def refresh(self) -> None:
         h = self.history
-        for w in (self.info, self.chart_panel, self.table):
-            w.setVisible(bool(h))
+        self.info.setVisible(bool(h))
         if not h:
             self.title.setText(tr("ship.pick"))
             self.use_btn.hide()
             return
         self.use_btn.show()
-        last = next((y for y in reversed(h) if not y.partial), h[-1])
+        last = self._latest_full()
         self.title.setText(f"{last.get('name', '')}  ·  IMO {last.imo}")
         tt, tv = last.get("tech_eff_type"), last.get("tech_eff_value")
         values = {"type": last.get("ship_type", "–"), "company": last.get("company_name", "–"),
@@ -190,7 +252,6 @@ class ShipDetail(QWidget):
                   (tr("legend.from"), [s.from_eu for s in splits], p.ets),
                   (tr("legend.to"), [s.to_eu for s in splits], p.imo)]
         self.chart.set_data(years, series, (tr("legend.ets"), [y.ets_reported_co2e for y in h], p.warn))
-
         cols = ("ship.col.year", "ship.col.co2", "ship.col.fuel", "ship.col.distance", "ship.col.sea",
                 "ship.col.co2nm", "ship.col.ets", "ship.col.note")
         self.table.setHorizontalHeaderLabels([tr(c) for c in cols])
@@ -213,38 +274,43 @@ class ShipDetail(QWidget):
         return next((y for y in reversed(self.history) if not y.partial), self.history[-1] if self.history else None)
 
     def _use(self) -> None:
-        self.state.use_ship(self._latest_full())
+        y = self._latest_full()
+        self.state.use_ship(y)
+        self.chosen.emit(y)
+
+    def is_chosen(self) -> bool:
+        cur = self.state.ship_year
+        return bool(cur and self.history and cur.imo == self.history[-1].imo)
 
     def _update_button(self) -> None:
-        cur = self.state.ship_year
-        active = bool(cur and self.history and cur.imo == self.history[-1].imo)
+        active = self.is_chosen()
         self.use_btn.setText(amp(tr("ship.in_use" if active else "ship.use")))
-        self.use_btn.setEnabled(not active)
+        self.use_btn.setObjectName("Chosen" if active else "Primary")
+        self.use_btn.style().unpolish(self.use_btn)
+        self.use_btn.style().polish(self.use_btn)
 
 
-class ShipPage(Page):
-    title_key = "page.ship.title"
-    lede_key = "page.ship.lede"
+# ============================================================================ step page
+class StepShip(Page):
+    title_key = "step.ship.q"
+    lede_key = "step.ship.lede"
+    title_style = ("Question", "QuestionLede")
 
     def __init__(self, state: AppState):
         super().__init__(state)
         bar = QHBoxLayout()
+        bar.setSpacing(12)
         self.search = QLineEdit()
+        self.search.setObjectName("Search")
         self.search.setClearButtonEnabled(True)
-        self.search.setMinimumWidth(360)
-        bar.addWidget(self.search, 2)
+        self.search.setMinimumWidth(420)
+        bar.addWidget(self.search, 3)
         self.type_box = QComboBox()
         self.type_box.setMinimumWidth(220)
         bar.addWidget(self.type_box, 1)
         self.count = label("", "Muted")
         bar.addWidget(self.count)
-        bar.addStretch(1)
-        self.import_btn = QPushButton()
-        self.import_btn.clicked.connect(self.import_folder)
-        bar.addWidget(self.import_btn)
         self.lay.addLayout(bar)
-        self.status = label("", "Faint")
-        self.lay.addWidget(self.status)
 
         self.empty = Panel()
         self.empty.body.addWidget(TrLabel("ship.no_data.title", "PanelTitle"))
@@ -259,16 +325,22 @@ class ShipPage(Page):
         self.view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.view.setAlternatingRowColors(True)
         self.view.verticalHeader().setVisible(False)
+        self.view.setShowGrid(False)
         self.view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.view.horizontalHeader().setStretchLastSection(True)
         self.view.setMinimumWidth(420)
         self.view.selectionModel().currentRowChanged.connect(self._row_changed)
         self.split.addWidget(self.view)
+        right = QWidget()
+        rl = QVBoxLayout(right)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(12)
         self.detail = ShipDetail(state)
-        self.split.addWidget(self.detail)
+        rl.addWidget(self.detail)
+        self.split.addWidget(right)
         self.split.setStretchFactor(0, 2)
         self.split.setStretchFactor(1, 3)
-        self.split.setMinimumHeight(900)
+        self.split.setMinimumHeight(560)
         self.lay.addWidget(self.split, 1)
 
         self._timer = QTimer(self, singleShot=True, interval=200)
@@ -277,8 +349,8 @@ class ShipPage(Page):
         self.type_box.currentIndexChanged.connect(lambda _: self._timer.start())
         state.db_changed.connect(self.on_db)
         self.on_db()
+        self.on_language()
 
-    # ------------------------------------------------------------------ data
     def on_db(self) -> None:
         db = self.state.db
         has = db is not None and db.count() > 0
@@ -292,19 +364,7 @@ class ShipPage(Page):
         for t in (db.ship_types() if has else []):
             self.type_box.addItem(t, t)
         self.type_box.blockSignals(False)
-        self._status()
         self.run_search()
-
-    def _status(self) -> None:
-        db = self.state.db
-        rel = db.releases() if db else []
-        if not rel:
-            self.status.setText("")
-            return
-        last = rel[-1]
-        gen = "/".join(reversed(last.generated.split("-"))) if last.generated else "–"
-        self.status.setText(tr("ship.data_status", ships=num(db.count()), first=rel[0].year, last=last.year,
-                               year=last.year, version=last.version, date=gen))
 
     def run_search(self) -> None:
         db = self.state.db
@@ -319,53 +379,22 @@ class ShipPage(Page):
         else:
             self.detail.show_ship(None)
 
+    def show_imo(self, imo: str) -> None:
+        """Open the step on a given ship (when a saved project is reopened)."""
+        self.search.blockSignals(True)
+        self.search.setText(imo)
+        self.search.blockSignals(False)
+        self.run_search()
+
     def _row_changed(self, current: QModelIndex, _prev: QModelIndex) -> None:
         if current.isValid():
             self.detail.show_ship(self.model.rows[current.row()].imo)
 
-    # ------------------------------------------------------------------ import
-    def import_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, tr("import.choose"))
-        if folder:
-            self.import_files(sorted(Path(folder).glob("*.xlsx")))
-
-    def import_files(self, files: list[Path]) -> None:
-        if not files:
-            QMessageBox.information(self, tr("import.title"), tr("import.none"))
-            return
-        dlg = QProgressDialog(tr("import.title"), None, 0, len(files), self)
-        dlg.setWindowTitle(tr("import.title"))
-        dlg.setMinimumDuration(0)
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
-        if self.state.db is not None:          # release the read-only handle while writing
-            self.state.db.close()
-            self.state.db = None
-        self._thread = QThread(self)
-        self._worker = ImportWorker(files, self.state.db_path)
-        self._worker.moveToThread(self._thread)
-        self._thread.started.connect(self._worker.run)
-        self._worker.progress.connect(lambda i, n, f: (dlg.setValue(i), dlg.setLabelText(tr("import.progress", file=f))))
-        self._worker.finished.connect(lambda res: self._import_done(res, dlg))
-        self._worker.finished.connect(self._thread.quit)
-        self._thread.start()
-
-    def _import_done(self, result, dlg: QProgressDialog) -> None:
-        dlg.close()
-        self.state.reopen()
-        if isinstance(result, Exception):
-            QMessageBox.warning(self, tr("import.title"), tr("import.error", error=str(result)))
-            return
-        done = sum(not r.skipped for r in result)
-        QMessageBox.information(self, tr("import.title"), tr("import.done", n=done, skipped=len(result) - done))
-
-    # ------------------------------------------------------------------ language / theme
     def on_language(self) -> None:
         self.search.setPlaceholderText(tr("ship.search.placeholder"))
-        self.import_btn.setText(amp(tr("ship.import")))
         if self.type_box.count():
             self.type_box.setItemText(0, tr("ship.type.all"))
         self.model.retranslate()
-        self._status()
         self.count.setText(tr("ship.results", n=num(len(self.model.rows))))
         self.detail.refresh()
 

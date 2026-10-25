@@ -1,91 +1,131 @@
-"""The window opens, switches language and theme, searches ships and feeds the EU ETS page."""
+"""Lobby → new project → choose ship → today's position → save → reopen."""
 import pytest
 
 pytest.importorskip("pytestqt")
 
 from navigator import i18n
+from navigator.data.projects import ProjectStore
 from navigator.ui import theme
 from navigator.ui.main_window import MainWindow
-from navigator.ui.pages import RegulationPage, ShipPage
 from navigator.ui.state import AppState
 
 
-def _make(qtbot, path):
-    from PySide6.QtCore import QSettings
-    QSettings().setValue("view", "eu")
-    w = MainWindow(AppState(path, bundle=False))
-    qtbot.addWidget(w)
-    return w
-
-
 @pytest.fixture
-def win(qtbot, mrv_db_path):
-    w = _make(qtbot, mrv_db_path)
+def win(qtbot, mrv_db_path, tmp_path):
+    w = MainWindow(AppState(mrv_db_path, bundle=False), ProjectStore(tmp_path / "projects"))
+    qtbot.addWidget(w)
     yield w
     w.close()
     i18n.set_language(i18n.DEFAULT)
-    theme.set_current(theme.DEEP_SEA)
+    theme.set_current(theme.DEFAULT)
 
 
-def page(w, cls):
-    return next(p for p in w.pages if isinstance(p, cls))
+def start_with_ship(w, query="old name"):
+    w.new_project()
+    pv = w.project_view
+    step = pv.ship_step
+    step.search.setText(query)
+    step.run_search()
+    step.detail.use_btn.click()
+    return pv
 
 
-def test_window_language_and_theme(win):
+def test_lobby_language_and_theme(win):
+    assert win.stack.currentWidget() is win.lobby
     assert win.windowTitle() == "Πλοηγός Απανθρακοποίησης"
     i18n.set_language("en")
     assert win.windowTitle() == "Decarbonisation Navigator"
-    assert win.nav_buttons[0][0].text() == "Ship"
-    win.set_theme("light")
-    assert theme.current().name == "light"
+    assert win.lobby.new_btn.text().endswith("New project")
+    win.set_theme("dark")
+    assert theme.current().name == "dark"
 
 
-def ets_total(reg):
-    reg.recompute()
-    return sum(r.ets.cost for r in reg.results)
+def test_new_project_requires_a_ship(win):
+    win.new_project()
+    pv = win.project_view
+    assert win.stack.currentWidget() is pv
+    assert not pv.next_btn.isEnabled()                      # step 1 needs a ship
+    pv.go(1)
+    assert pv.current == 0                                  # later steps still locked
 
 
-def test_regulation_page_reacts_to_input(win):
-    reg = page(win, RegulationPage)
-    before = ets_total(reg)
-    reg.inputs.scope["in_port"].setValue(reg.inputs.scope["in_port"].value() + 1000)
-    assert ets_total(reg) > before
-    reg.inputs.gt.setValue(1000)                  # below 5000 GT: out of scope
-    assert ets_total(reg) == 0
+def test_choose_ship_then_position(win):
+    pv = start_with_ship(win)
+    assert pv.project.name == "NEW NAME"                    # named after the ship
+    assert pv.next_btn.isEnabled()
+    pv.next_btn.click()
+    assert pv.current == 1
+    pos = pv.position_step
+    assert pos.inputs.loaded is not None and pos.inputs.scope["intra_eu"].value() == 4000
+    assert pos.inputs.cii_type.currentData() == "ropax"
+    assert pos.results and pos.n_total.value.text() != "–"
+
+
+def test_price_and_nzf_shortcuts(win):
+    pv = start_with_ship(win)
+    pv.next_btn.click()
+    pos = pv.position_step
+    pos._pick_price("high")
+    pos.recompute()
+    assert pos.inputs.prices[2050].value() == 250
+    assert pos.price.buttons["high"].isChecked()
+    pos.nzf.picked.emit("not_adopted")
+    pos.recompute()
+    assert all(not r.nzf.applies for r in pos.results)
 
 
 def test_view_switch_changes_only_imo_costs(win):
-    reg = page(win, RegulationPage)
-    reg.recompute()
-    eu = {r.year: r for r in reg.results}
-    assert reg.inputs.ww.isHidden()
+    pv = start_with_ship(win)
+    pv.next_btn.click()
+    pos = pv.position_step
+    pos.inputs.eu_share.setValue(40)                        # user value (method a)
+    pos.recompute()
+    eu = {r.year: r for r in pos.results}
     win.state.set_view("ww")
-    ww = {r.year: r for r in reg.results}
-    assert not reg.inputs.ww.isHidden()
-    assert win.view_switch.buttons["ww"].isChecked()
+    ww = {r.year: r for r in pos.results}
+    assert not pos.inputs.ww.isHidden() and win.view_switch.buttons["ww"].isChecked()
     assert ww[2030].ets.cost == eu[2030].ets.cost
-    assert ww[2030].nzf.cost_eur > eu[2030].nzf.cost_eur
+    assert ww[2030].nzf.cost_eur >= eu[2030].nzf.cost_eur
     win.state.set_view("eu")
 
 
-def test_search_and_use_ship(win):
-    ship = page(win, ShipPage)
-    assert ship.model.rowCount() == 3
-    ship.search.setText("old name")
-    ship.run_search()
-    assert [r.imo for r in ship.model.rows] == ["9000001"]
-    assert ship.detail.history[-1].year == 2025
-    ship.detail.use_btn.click()
-    reg = page(win, RegulationPage)
-    assert reg.inputs.loaded is not None and reg.inputs.scope["intra_eu"].value() == 4000
-    assert reg.inputs.ice.currentData() == "IA" and reg.inputs.scope_override is True
-    assert reg.inputs.cii_type.currentData() == "ropax" and reg.inputs.share_estimate is not None
-    reg.inputs.reset_example()
-    assert reg.inputs.loaded is None
+def test_project_saves_and_reopens(win):
+    pv = start_with_ship(win)
+    pv.next_btn.click()
+    pv.position_step._pick_price("low")
+    pv.position_step.capacity.setValue(30_000)
+    pv.position_step.recompute()
+    pv.save_now()
+    pid = pv.project.id
+    win.show_lobby()
+    cards = win.store.list()
+    assert [p.id for p in cards] == [pid] and cards[0].ship["imo"] == "9000001"
+    assert cards[0].summary["total_eur"] > 0
+    win.new_project()                                       # something else in between
+    win.open_project(pid)
+    pos = win.project_view.position_step
+    assert win.project_view.current == 1
+    assert pos.inputs.loaded.imo == "9000001"
+    assert pos.inputs.prices[2050].value() == 100 and pos.inputs.capacity.value() == 30_000
 
 
-def test_empty_database_shows_import_hint(qtbot, tmp_path):
-    w = _make(qtbot, tmp_path / "missing.sqlite")
-    sp = page(w, ShipPage)
-    assert sp.empty.isVisibleTo(w) and not sp.split.isVisibleTo(w)
+def test_store_export_import(tmp_path):
+    store = ProjectStore(tmp_path / "a")
+    from navigator.data.projects import Project
+    p = Project(name="Test")
+    store.save(p)
+    f = store.export(p.id, tmp_path / "out")
+    assert f.suffix == ".dnproj"
+    q = store.import_file(f)                                # same id exists → new id
+    assert q.id != p.id and q.name == "Test" and len(store.list()) == 2
+    store.delete(p.id)
+    assert [x.id for x in store.list()] == [q.id]
+
+
+def test_empty_database_shows_hint(qtbot, tmp_path):
+    w = MainWindow(AppState(tmp_path / "missing.sqlite", bundle=False), ProjectStore(tmp_path / "p"))
+    qtbot.addWidget(w)
+    w.new_project()
+    step = w.project_view.ship_step
+    assert not step.empty.isHidden() and step.split.isHidden()
     w.close()

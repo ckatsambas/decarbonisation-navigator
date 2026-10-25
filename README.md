@@ -17,7 +17,8 @@ undergraduate thesis at the University of West Attica.
 | 0 | Foundation, engine skeleton, EU ETS cost engine, bilingual shell, CI | done |
 | 0.5 | EU MRV ship database (2018–2025), Ship page, ETS validated against EMSA | done |
 | 1 | FuelEU Maritime, IMO NZF scenarios, CII, combined timeline, EU/WW views | done (v0.1.0) |
-| 2 | Ship-type library and real ships by IMO number | planned |
+| 1.5 | Guided interface: lobby, projects, six-step route, nautical-chart design | done |
+| 2 | Ship-type library, ship size estimate, probabilistic worldwide estimate | next |
 | 3 | Technology & fuel library with sourced ranges | planned |
 | 4 | Weighting (BWM, AHP, entropy, CRITIC), ranking (SAW, TOPSIS, PROMETHEE II, VIKOR), SMAA-2 | planned |
 | 5 | Bundles and timing (mixed-integer optimisation), fleets, FuelEU pooling, group decisions, reports | planned |
@@ -32,7 +33,8 @@ navigator/
   data/         EU MRV importer and database (pure Python)
   config/       regulation parameters as JSON, each value with its source and check date
   i18n/         el.json / en.json text catalogues (live language switch)
-  ui/           PySide6 interface: theme, shell, pages
+  data/projects saved projects (library + .dnproj export)
+  ui/           PySide6 interface: lobby, six-step project route, theme
 docs/decisions/ one note per design decision (feeds thesis chapter 6)
 docs/validation/ engine checks against published data (feeds thesis chapters 5–7)
 tests/          pytest; the engine is tested against worked examples

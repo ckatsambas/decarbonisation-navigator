@@ -1,4 +1,4 @@
-"""Main window: sidebar navigation, top bar with language and theme switches, page stack."""
+"""Main window: a slim top bar over either the lobby or an open project."""
 from __future__ import annotations
 
 from PySide6.QtCore import QSettings
@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
     QHBoxLayout,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QStackedWidget,
@@ -15,23 +16,17 @@ from PySide6.QtWidgets import (
 )
 
 from .. import __version__, i18n
+from ..data.projects import Project, ProjectStore
 from ..i18n import tr
 from . import theme
-from .pages import DecisionPage, MeasuresPage, RegulationPage, ReportPage, ShipPage, UncertaintyPage
+from .lobby import Lobby
+from .project_view import ProjectView
 from .state import AppState
 from .widgets import TrLabel, amp, label
 
-NAV = [
-    ("nav.group.inputs", [("nav.ship", ShipPage), ("nav.measures", MeasuresPage),
-                          ("nav.regulation", RegulationPage)]),
-    ("nav.group.analysis", [("nav.decision", DecisionPage), ("nav.uncertainty", UncertaintyPage)]),
-    ("nav.group.output", [("nav.report", ReportPage)]),
-]
-START_PAGE = "nav.ship"
-
 
 class Segmented(QWidget):
-    """Two or more mutually exclusive buttons (language, theme)."""
+    """Two or more mutually exclusive buttons (scope, language, theme)."""
 
     def __init__(self, options: list[tuple[str, str]], current: str, on_pick, small: bool = False):
         super().__init__()
@@ -52,130 +47,137 @@ class Segmented(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, state: AppState | None = None):
+    def __init__(self, state: AppState | None = None, store: ProjectStore | None = None):
         super().__init__()
         self.settings = QSettings()
         self.state = state or AppState()
-        saved_view = self.settings.value("view", "eu")
-        self.state.set_view(saved_view if saved_view in ("eu", "ww") else "eu")
-        self.state.view_changed.connect(lambda v: self.settings.setValue("view", v))
+        self.store = store or ProjectStore()
         self.resize(1440, 920)
-        self.setMinimumSize(1100, 700)
+        self.setMinimumSize(1100, 720)
 
         root = QWidget()
-        h = QHBoxLayout(root)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(0)
-        h.addWidget(self._sidebar())
-        right = QVBoxLayout()
-        right.setContentsMargins(0, 0, 0, 0)
-        right.setSpacing(0)
-        right.addWidget(self._topbar())
+        v = QVBoxLayout(root)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+        v.addWidget(self._topbar())
         self.stack = QStackedWidget()
-        right.addWidget(self.stack, 1)
-        h.addLayout(right, 1)
+        self.lobby = Lobby(self.state, self.store)
+        self.project_view = ProjectView(self.state, self.store)
+        self.stack.addWidget(self.lobby)
+        self.stack.addWidget(self.project_view)
+        v.addWidget(self.stack, 1)
         self.setCentralWidget(root)
 
-        self.pages = []
-        for _, items in NAV:
-            for _, cls in items:
-                page = cls(self.state)
-                self.pages.append(page)
-                self.stack.addWidget(page)
-        keys = [k for _, items in NAV for k, _ in items]
-        self.go(keys.index(START_PAGE))
+        self.lobby.new_project.connect(self.new_project)
+        self.lobby.open_project.connect(self.open_project)
+        self.project_view.leave.connect(self.show_lobby)
+        self.project_view.saved.connect(lambda _: self.saved_label.setText(tr("top.saved")))
+        self.project_view.name_changed.connect(self.name_edit.setText)
+        self.state.view_changed.connect(lambda val: self.view_switch.buttons[val].setChecked(True))
         self._unsubscribe = i18n.on_change(lambda _: self.retranslate())
+        self.show_lobby()
         self.retranslate()
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event) -> None:  # noqa: N802
+        if self.stack.currentWidget() is self.project_view:
+            self.project_view.save_now()
         self._unsubscribe()
         super().closeEvent(event)
 
     # ------------------------------------------------------------------ layout
-    def _sidebar(self) -> QWidget:
-        side = QFrame()
-        side.setObjectName("Sidebar")
-        side.setFixedWidth(248)
-        v = QVBoxLayout(side)
-        v.setContentsMargins(0, 22, 0, 14)
-        v.setSpacing(0)
-        self.wordmark = TrLabel("app.name", "Wordmark", wrap=True)
-        self.wordmark.setContentsMargins(18, 0, 12, 0)
-        self.tagline = TrLabel("app.tagline", "WordmarkSub", wrap=True)
-        self.tagline.setContentsMargins(18, 4, 12, 10)
-        v.addWidget(self.wordmark)
-        v.addWidget(self.tagline)
-        self.nav_labels: list[TrLabel] = []
-        self.nav_buttons: list[tuple[QPushButton, str]] = []
-        idx = 0
-        for group, items in NAV:
-            g = TrLabel(group, "NavGroup")
-            self.nav_labels.append(g)
-            v.addWidget(g)
-            for key, _ in items:
-                b = QPushButton()
-                b.setObjectName("NavButton")
-                b.setCheckable(True)
-                b.clicked.connect(lambda _=False, i=idx: self.go(i))
-                v.addWidget(b)
-                self.nav_buttons.append((b, key))
-                idx += 1
-        v.addStretch(1)
-        version = label(f"v{__version__}", "Faint")
-        version.setContentsMargins(18, 0, 0, 0)
-        v.addWidget(version)
-        return side
-
     def _topbar(self) -> QWidget:
         bar = QFrame()
         bar.setObjectName("TopBar")
         h = QHBoxLayout(bar)
-        h.setContentsMargins(24, 8, 24, 8)
+        h.setContentsMargins(24, 9, 24, 9)
         h.setSpacing(10)
+        # left: wordmark (lobby) or back + project name (project)
+        self.brand = QWidget()
+        bl = QVBoxLayout(self.brand)
+        bl.setContentsMargins(0, 0, 0, 0)
+        bl.setSpacing(0)
+        self.wordmark = TrLabel("app.name", "Wordmark")
+        self.tagline = TrLabel("app.tagline", "WordmarkSub")
+        bl.addWidget(self.wordmark)
+        bl.addWidget(self.tagline)
+        h.addWidget(self.brand)
+        self.back_btn = QPushButton()
+        self.back_btn.setObjectName("Back")
+        self.back_btn.clicked.connect(self.show_lobby)
+        h.addWidget(self.back_btn)
+        self.name_edit = QLineEdit()
+        self.name_edit.setObjectName("ProjectName")
+        self.name_edit.editingFinished.connect(lambda: self.project_view.rename(self.name_edit.text()))
+        h.addWidget(self.name_edit)
+        self.saved_label = label("", "Saved")
+        h.addWidget(self.saved_label)
         h.addStretch(1)
+        # right: scope (project only), language, theme
+        self.view_box = QWidget()
+        vb = QHBoxLayout(self.view_box)
+        vb.setContentsMargins(0, 0, 0, 0)
+        vb.setSpacing(8)
         self.view_label = TrLabel("top.view", "TopLabel")
-        h.addWidget(self.view_label)
+        vb.addWidget(self.view_label)
         self.view_switch = Segmented([("eu", "EU"), ("ww", "WW")], self.state.view, self.state.set_view, small=True)
-        h.addWidget(self.view_switch)
-        self.state.view_changed.connect(lambda v: self.view_switch.buttons[v].setChecked(True))
+        vb.addWidget(self.view_switch)
+        h.addWidget(self.view_box)
         h.addSpacing(14)
-        self.lang_label = TrLabel("top.language", "TopLabel")
-        h.addWidget(self.lang_label)
-        self.lang_switch = Segmented([("el", "ΕΛ"), ("en", "EN")], i18n.language(), i18n.set_language)
+        self.lang_switch = Segmented([("el", "ΕΛ"), ("en", "EN")], i18n.language(), i18n.set_language, small=True)
         h.addWidget(self.lang_switch)
-        h.addSpacing(14)
-        self.theme_label = TrLabel("top.theme", "TopLabel")
-        h.addWidget(self.theme_label)
-        self.theme_switch = Segmented([("dark", ""), ("light", "")], theme.current().name, self.set_theme)
+        h.addSpacing(8)
+        self.theme_switch = Segmented([("light", "☀"), ("dark", "☾")], theme.current().name, self.set_theme, small=True)
         h.addWidget(self.theme_switch)
+        self.version = label(f"v{__version__}", "TopLabel")
+        h.addWidget(self.version)
         return bar
 
-    # ------------------------------------------------------------------ actions
-    def go(self, i: int) -> None:
-        self.stack.setCurrentIndex(i)
-        for j, (b, _) in enumerate(self.nav_buttons):
-            b.setChecked(j == i)
+    # ------------------------------------------------------------------ screens
+    def _in_project(self, on: bool) -> None:
+        self.brand.setVisible(not on)
+        for w in (self.back_btn, self.name_edit, self.saved_label, self.view_box):
+            w.setVisible(on)
 
+    def show_lobby(self) -> None:
+        if self.stack.currentWidget() is self.project_view:
+            self.project_view.save_now()
+        self.lobby.refresh()
+        self.stack.setCurrentWidget(self.lobby)
+        self._in_project(False)
+
+    def new_project(self) -> None:
+        p = Project()
+        self.store.save(p)
+        self._show_project(p)
+
+    def open_project(self, pid: str) -> None:
+        self._show_project(self.store.load(pid))
+
+    def _show_project(self, p: Project) -> None:
+        self.project_view.open(p)
+        self.name_edit.setText(p.name)
+        self.name_edit.setPlaceholderText(tr("lobby.untitled"))
+        self.saved_label.setText("")
+        self.stack.setCurrentWidget(self.project_view)
+        self._in_project(True)
+
+    # ------------------------------------------------------------------ language / theme
     def set_theme(self, name: str) -> None:
         theme.set_current(theme.PALETTES[name])
         QApplication.instance().setStyleSheet(theme.stylesheet(theme.current()))
         self.settings.setValue("theme", name)
-        for p in self.pages:
-            p.on_theme()
+        self.project_view.on_theme()
+        self.lobby.bg.update()
 
     def retranslate(self) -> None:
         self.settings.setValue("language", i18n.language())
         self.setWindowTitle(tr("app.name"))
-        for w in (self.wordmark, self.tagline, self.view_label, self.lang_label, self.theme_label, *self.nav_labels):
+        for w in (self.wordmark, self.tagline, self.view_label):
             w.retranslate()
         self.view_switch.setToolTip(tr("top.view.tip"))
-        for b, key in self.nav_buttons:
-            b.setText(amp(tr(key)))
-        self.theme_switch.buttons["dark"].setText(tr("theme.dark"))
-        self.theme_switch.buttons["light"].setText(tr("theme.light"))
-        for p in self.pages:
-            p.retranslate()
-        reg = next(p for p in self.pages if isinstance(p, RegulationPage))
-        n = reg.unverified_count()
-        msg = tr("status.ready") + (("  ·  " + tr("status.unverified", n=n)) if n else "")
-        self.statusBar().showMessage(msg)
+        self.back_btn.setText(amp("←  " + tr("top.projects")))
+        self.name_edit.setPlaceholderText(tr("lobby.untitled"))
+        self.theme_switch.buttons["light"].setToolTip(tr("theme.light"))
+        self.theme_switch.buttons["dark"].setToolTip(tr("theme.dark"))
+        self.lobby.retranslate()
+        self.project_view.retranslate()

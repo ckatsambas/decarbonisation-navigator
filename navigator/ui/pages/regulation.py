@@ -1,7 +1,7 @@
-"""Carbon regulations page: one set of ship inputs, results for every regime.
+"""Detailed inputs and results for all carbon regimes (shown under "Advanced" in step 2).
 
-Left: ship, emissions, fuel, activity outside the EU (worldwide view only) and scenario.
-Right: key figures and tabs (overview, EU ETS, FuelEU, IMO NZF, CII, parameters).
+Inputs: ship, emissions, fuel, activity outside the EU (worldwide view only) and scenario.
+Results: key figures and tabs (overview, EU ETS, FuelEU, IMO NZF, CII, sources).
 """
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QGridLayout,
-    QHBoxLayout,
     QHeaderView,
     QPushButton,
     QTableWidget,
@@ -28,7 +27,7 @@ from PySide6.QtWidgets import (
 
 from ...engine import fuels as F
 from ...engine import params as P
-from ...engine.compliance import YEARS, Profile, Rules, Scenario, YearResult, evaluate
+from ...engine.compliance import YEARS, Profile, Rules, Scenario, YearResult
 from ...engine.estimate import EuShare, user_share
 from ...engine.models import AnnualEmissions, ScopeSplit, Ship, ShipCategory, YearSeries
 from ...engine.regulation.cii import MRV_TO_CII
@@ -37,7 +36,6 @@ from ...i18n import eur_short, language, num, pct, pick, tr
 from .. import theme
 from ..charts import BarChart, StackedBarChart
 from ..widgets import Kpi, Panel, ReadMore, TrLabel, amp
-from .base import Page
 
 EU_SCOPES = ("intra_eu", "in_port", "from_eu", "to_eu")
 CII_TYPES = sorted(set(MRV_TO_CII.values()))
@@ -382,6 +380,58 @@ class Inputs(QWidget):
             self.ww_more.set_key("ww.more", hours=num(e.mrv_hours), days=num(e.sea_days),
                                  share=pct(min(e.mrv_hours / (e.sea_days * 24), 1.0)), low=pct(e.low), high=pct(e.high))
 
+    # ------------------------------------------------------------------ save / restore
+    SPINS = ("gt", "capacity", "distance", "ch4", "n2o", "share1", "eu_share")
+    COMBOS = ("category", "ice", "cii_type", "fuel1", "fuel2", "nzf")
+
+    def snapshot(self) -> dict:
+        d = {k: getattr(self, k).value() for k in self.SPINS}
+        d.update({k: getattr(self, k).currentData() for k in self.COMBOS})
+        d.update({f"scope_{k}": s.value() for k, s in self.scope.items()})
+        d.update({f"eua_{y}": s.value() for y, s in self.prices.items()})
+        d["domestic"] = self.domestic.isChecked()
+        d["ship"] = {"imo": self.loaded.imo, "year": self.loaded.year} if self.loaded else None
+        d["em_from_mrv"] = self.loaded_em is not None
+        d["share_from_estimate"] = self.share_estimate is not None
+        d["scope_override"] = self.scope_override
+        d["coverage_ratio"] = self.coverage_ratio
+        return d
+
+    def restore(self, d: dict, db=None) -> None:
+        """Bring back a saved project's inputs (reloading its ship from EU MRV when available)."""
+        if not d:
+            return
+        ship = d.get("ship")
+        if ship and db is not None:
+            year = next((h for h in db.history(ship["imo"]) if h.year == ship["year"]), None)
+            if year is not None:
+                self.load_ship(year)
+        self._filling = True
+        try:
+            for k in self.SPINS:
+                if k in d:
+                    getattr(self, k).setValue(d[k])
+            for k in self.COMBOS:
+                if k in d:
+                    getattr(self, k).select(d[k])
+            for k, s in self.scope.items():
+                s.setValue(d.get(f"scope_{k}", s.value()))
+            for y, s in self.prices.items():
+                s.setValue(d.get(f"eua_{y}", s.value()))
+            self.domestic.setChecked(bool(d.get("domestic", False)))
+        finally:
+            self._filling = False
+        if not d.get("em_from_mrv"):
+            self.loaded_em = None
+            self.coverage_ratio = None
+            self.ratio_text.hide()
+        if not d.get("share_from_estimate"):
+            self.share_estimate = None
+        self.scope_override = d.get("scope_override", self.scope_override)
+        self._cii_type_changed()
+        self._show_share_method()
+        self.changed.emit()
+
     # ------------------------------------------------------------------ language
     def retranslate(self) -> None:
         self.reset_btn.setText(amp(tr("ets.reset")))
@@ -410,6 +460,7 @@ class Results(QWidget):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(12)
         kp = Panel()
+        self.kpi_panel = kp
         kg = QGridLayout()
         kg.setHorizontalSpacing(24)
         self.k_total = Kpi("kpi.total", a=YEARS[0], b=YEARS[-1])
@@ -580,48 +631,3 @@ class ParamsTable(QWidget):
                 self.table.setItem(i, j, it)
         for col, width in ((0, 260), (1, 260), (2, 360), (3, 90)):
             self.table.setColumnWidth(col, width)
-
-
-# =============================================================================== page
-class RegulationPage(Page):
-    title_key = "reg.title"
-    lede_key = "reg.lede"
-
-    def __init__(self, state=None):
-        super().__init__(state)
-        self.rules = Rules.load()
-        row = QHBoxLayout()
-        row.setSpacing(16)
-        self.inputs = Inputs(state, self.rules)
-        self.inputs.setFixedWidth(410)
-        row.addWidget(self.inputs, 0, Qt.AlignmentFlag.AlignTop)
-        self.out = Results(self.rules)
-        row.addWidget(self.out, 1)
-        self.lay.addLayout(row, 1)
-        self.inputs.changed.connect(self.recompute)
-        if state is not None:
-            state.ship_changed.connect(self.inputs.load_ship)
-            state.view_changed.connect(lambda _: self.recompute())
-        self.recompute()
-
-    @property
-    def view(self) -> str:
-        return self.state.view if self.state is not None else "eu"
-
-    def recompute(self) -> None:
-        self.inputs.ww.setVisible(self.view == "ww")
-        prof = self.inputs.profile()
-        self.results = evaluate(prof, self.inputs.scenario(self.view), YEARS, self.rules)
-        self.out.display(self.results, self.view, prof.eu_share)
-
-    def unverified_count(self) -> int:
-        return sum(len(ps.unverified()) for ps in self.out.params.sets)
-
-    def on_language(self) -> None:
-        self.inputs.retranslate()
-        self.out.retranslate()
-        self.recompute()
-
-    def on_theme(self) -> None:
-        self.out.restyle()
-        self.recompute()
