@@ -327,6 +327,11 @@ def import_files(paths: Iterable[Path], db: Path | None = None, *, force: bool =
             results.append(ImportResult(path.name, year, version, generated, len(rows) - n_partial, n_partial))
         with con:
             _rebuild_ships(con)
+        if all(not r.skipped for r in results) and results:
+            imported = {r.year for r in results}
+            others = {y for (y,) in con.execute("SELECT year FROM releases")} - imported
+            if not others:
+                _set_importer(con, IMPORTER_VERSION)
         if progress:
             progress(len(paths), len(paths), "")
     finally:
@@ -340,6 +345,30 @@ RESOURCES = Path(__file__).resolve().parents[1] / "resources"
 
 def bundled_path() -> Path:
     return RESOURCES / "mrv.sqlite.xz"
+
+
+# Version of the importer's reading rules. Raise it when a fix changes what is read from the EMSA files
+# (2: "Annual Total time spent at sea" header of the 2018–2023 files), so that existing installations
+# replace their bundled years even when the EMSA versions are unchanged.
+IMPORTER_VERSION = 2
+
+
+def _importer_of(con: sqlite3.Connection) -> int:
+    row = con.execute("SELECT value FROM meta WHERE key = 'importer'").fetchone()
+    return int(row[0]) if row else 1
+
+
+def _set_importer(con: sqlite3.Connection, v: int) -> None:
+    with con:
+        con.execute("INSERT OR REPLACE INTO meta VALUES ('importer', ?)", (str(v),))
+
+
+def _bundle_importer(bundle: Path) -> int:
+    manifest = bundle.with_name("mrv_manifest.json")
+    if manifest.exists():
+        import json
+        return int(json.loads(manifest.read_text(encoding="utf-8")).get("importer", 1))
+    return 1
 
 
 def _bundle_releases(bundle: Path) -> dict[int, int]:
@@ -369,15 +398,22 @@ def ensure_database(db: Path | None = None, bundle: Path | None = None) -> str:
     bundle = bundle or bundled_path()
     if not bundle.exists():
         return "no-bundle"
+    importer = _bundle_importer(bundle)
     if not db.exists():
         db.parent.mkdir(parents=True, exist_ok=True)
         _decompress(bundle, db)
+        con = _connect(db)
+        try:
+            _set_importer(con, importer)
+        finally:
+            con.close()
         return "created"
     con = _connect(db)
     try:
         have = {y: v or 0 for y, v in con.execute("SELECT year, version FROM releases")}
         wanted = _bundle_releases(bundle)
-        if wanted and all(have.get(y, -1) >= v for y, v in wanted.items()):
+        stale = _importer_of(con) < importer          # read with older rules: replace equal versions too
+        if not stale and wanted and all(have.get(y, -1) >= v for y, v in wanted.items()):
             return "current"
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
@@ -387,7 +423,7 @@ def ensure_database(db: Path | None = None, bundle: Path | None = None) -> str:
             cols = [r[1] for r in con.execute("PRAGMA table_info(reports)") if r[1] != "id"]
             col_list = ", ".join(cols)
             newer = [(y, v) for y, v in con.execute("SELECT year, version FROM b.releases")
-                     if have.get(y, -1) < (v or 0)]
+                     if have.get(y, -1) < (v or 0) or (stale and have.get(y, -1) <= (v or 0))]
             with con:
                 for y, _ in newer:
                     con.execute("DELETE FROM reports WHERE year = ?", (y,))
@@ -396,6 +432,8 @@ def ensure_database(db: Path | None = None, bundle: Path | None = None) -> str:
                 if newer:
                     _rebuild_ships(con)
             con.execute("DETACH DATABASE b")
+        if stale and all(have.get(y, -1) <= v for y, v in wanted.items()):
+            _set_importer(con, importer)
         return "updated" if newer else "current"
     finally:
         con.close()

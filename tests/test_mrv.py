@@ -121,3 +121,38 @@ def test_profile_carries_size_and_share_estimates(db):
     p = db.latest("9000001").profile()
     assert p.eu_share is not None and p.eu_share.size_class is not None
     assert p.eu_share.method in ("estimated", "eu_dominant")
+
+
+def test_old_importer_database_is_refreshed_from_bundle(tmp_path):
+    """An installation whose data were read with older importer rules gets the bundled years again,
+    even when the EMSA versions are the same (the 2018-2023 time-at-sea fix)."""
+    import json
+    import lzma
+    import sqlite3
+
+    from navigator.data import mrv
+    src = tmp_path / "src.sqlite"
+    con = mrv._connect(src)
+    with con:
+        con.execute("INSERT INTO releases VALUES (2018, 5, '2026-01-01', 'f', 'now', 1, 0)")
+        con.execute("INSERT INTO reports (imo, year, partial, time_at_sea) VALUES ('1', 2018, 0, 4000)")
+        mrv._rebuild_ships(con)
+    con.close()
+    bundle = tmp_path / "mrv.sqlite.xz"
+    bundle.write_bytes(lzma.compress(src.read_bytes()))
+    (tmp_path / "mrv_manifest.json").write_text(json.dumps(
+        {"importer": mrv.IMPORTER_VERSION, "releases": [{"year": 2018, "version": 5}]}))
+    user = tmp_path / "user.sqlite"
+    con = mrv._connect(user)                       # same EMSA version, old importer, no time at sea
+    with con:
+        con.execute("INSERT INTO releases VALUES (2018, 5, '2026-01-01', 'f', 'then', 1, 0)")
+        con.execute("INSERT INTO reports (imo, year, partial, time_at_sea) VALUES ('1', 2018, 0, NULL)")
+    con.close()
+    assert mrv.ensure_database(user, bundle) == "updated"
+    c = sqlite3.connect(user)
+    assert c.execute("SELECT time_at_sea FROM reports").fetchone()[0] == 4000
+    assert c.execute("SELECT value FROM meta WHERE key='importer'").fetchone()[0] == str(mrv.IMPORTER_VERSION)
+    c.close()
+    assert mrv.ensure_database(user, bundle) == "current"
+    fresh = tmp_path / "fresh.sqlite"
+    assert mrv.ensure_database(fresh, bundle) == "created" and mrv.ensure_database(fresh, bundle) == "current"

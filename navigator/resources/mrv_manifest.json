@@ -1,6 +1,7 @@
 {
   "source": "EMSA THETIS-MRV public emission reports",
   "url": "https://mrv.emsa.europa.eu",
+  "importer": 2,
   "releases": [
     {
       "year": 2018,
