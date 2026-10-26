@@ -452,5 +452,19 @@
   "dec.conf": "Confidence",
   "dec.central": "What must matter for it to win",
   "dec.smaa.more": "SMAA-2 (Lahdelma & Salminen 2001). “Rank 1”: rank acceptability index b¹. “Expected rank”: average rank. “Confidence”: how often it wins when only the data vary, with its central weights. The last column shows the two heaviest criteria in the futures where the option wins.",
-  "pri.reset": "Reset this section's answers"
+  "pri.reset": "Reset this section's answers",
+  "dec.rank.short": "#{r}",
+  "dec.recommended": "recommended",
+  "dec.reference": "reference",
+  "dec.acc.more": "Each cell shows the share of futures in which the option takes that rank (SMAA rank acceptability). The darker, the more often. Options are sorted by expected rank; the recommendation has a red outline and “No investment” a dashed one.",
+  "dec.map": "PRIORITY MAP",
+  "dec.map.lede": "Which option comes first for every possible split of weight between two criteria families. The others share what is left in your proportions. The red dot is your weights.",
+  "dec.axes.money-climate": "Money – Climate",
+  "dec.axes.money-operations": "Money – Operations",
+  "dec.axes.climate-technology": "Climate – Technology",
+  "dec.axes.money-regulation": "Money – Regulation",
+  "dec.map.you": "your weights; grey: the weights SMAA tries",
+  "dec.map.note": "With your weights “{name}” wins. Of the weights SMAA tries around them, {share} fall in the same area.",
+  "dec.map.more": "The map uses the options' most likely values and a weighted sum, as SMAA-2 does. If the red dot lies deep inside one area, the decision withstands changes in priorities; near a border, a small change alters the winner. Hover over the map for details.",
+  "top.anim": "Chart animations"
 }

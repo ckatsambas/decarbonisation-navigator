@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QButtonGroup, QGridLayout, QHBoxLayout, QPushButto
 from ...engine.compliance import BASELINES, YEARS, Rules, evaluate
 from ...engine.regulation.imo_nzf import SCENARIOS
 from ...i18n import eur_short, num, pct, tr
-from .. import theme
+from .. import anim, theme
 from ..charts import StackedBarChart
 from ..widgets import Fold, Panel, ReadMore, TrLabel, amp, label
 from .base import Page
@@ -198,9 +198,8 @@ class StepPosition(Page):
         self._sync_controls()
         r = {x.year: x for x in self.results}
         total = sum(x.total_eur for x in self.results)
-        self.n_total.value.setText(eur_short(total))
-        self.n_2030.value.setText(eur_short(r[2030].total_eur))
-        self.n_2035.value.setText(eur_short(r[2035].total_eur))
+        for big, v in ((self.n_total, total), (self.n_2030, r[2030].total_eur), (self.n_2035, r[2035].total_eur)):
+            self.count_to(big, v)
         c = r[2030].cii
         has_cii = bool(c and not math.isnan(c.attained))
         self.n_cii.value.setText(c.rating if has_cii else "–")
@@ -226,6 +225,13 @@ class StepPosition(Page):
                                     (tr("legend.fueleu"), [x.fueleu_cost for x in self.results], p.fueleu),
                                     (tr("legend.nzf"), [max(x.nzf.cost_eur, 0) for x in self.results], p.imo)])
         self.computed.emit()
+
+    @staticmethod
+    def count_to(big: BigNumber, value: float) -> None:
+        """The big figure counts from its previous value to the new one."""
+        start = getattr(big, "_shown_value", 0.0)
+        big._shown_value = value
+        anim.tween(big, start, value, lambda v: big.value.setText(eur_short(v)), ms=420)
 
     @staticmethod
     def rating_colour(rating: str) -> str:

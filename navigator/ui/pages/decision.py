@@ -14,9 +14,12 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
+    QProgressBar,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...engine.mcda import criteria as C
@@ -24,7 +27,7 @@ from ...engine.mcda import ranking as RK
 from ...engine.mcda import smaa as S
 from ...i18n import eur_short, num, pct, pick, tr
 from .. import theme
-from ..charts import HBarChart
+from ..maps import RED, PriorityMap, RankHeatmap
 from ..widgets import Panel, ReadMore, TrLabel, amp, label
 from .base import Page
 from .position import Choice
@@ -33,6 +36,8 @@ DRAWS = ("2000", "10000", "20000")
 ODDS = {"equal": {"as_drafted": 1, "delayed": 1, "not_adopted": 1},
         "adopt": {"as_drafted": 0.6, "delayed": 0.2, "not_adopted": 0.2},
         "reject": {"as_drafted": 0.2, "delayed": 0.2, "not_adopted": 0.6}}
+AXES = {"money-climate": ("money", "climate"), "money-operations": ("money", "operations"),
+        "climate-technology": ("climate", "technology"), "money-regulation": ("money", "regulation")}
 SURE = {"high": 300.0, "mid": 100.0, "low": 20.0, "none": 0.0}
 
 
@@ -86,6 +91,25 @@ class StepDecision(Page):
         rp.body.addWidget(ReadMore("dec.methods.more"))
         self.lay.addWidget(rp)
 
+        mp = Panel("dec.map")
+        mp.body.addWidget(TrLabel("dec.map.lede", "Muted", wrap=True))
+        self.axes = Choice([(k, f"dec.axes.{k}") for k in AXES])
+        self.axes.set_value("money-climate")
+        mp.body.addWidget(self.axes)
+        row = QHBoxLayout()
+        self.map = PriorityMap()
+        row.addWidget(self.map, 3)
+        self.legend = QVBoxLayout()
+        self.legend.setSpacing(6)
+        lw = QWidget()
+        lw.setLayout(self.legend)
+        row.addWidget(lw, 2, Qt.AlignmentFlag.AlignTop)
+        mp.body.addLayout(row)
+        self.map_note = label("", "Sentence", wrap=True)
+        mp.body.addWidget(self.map_note)
+        mp.body.addWidget(ReadMore("dec.map.more"))
+        self.lay.addWidget(mp)
+
         up = Panel("dec.smaa")
         grid = QGridLayout()
         grid.setHorizontalSpacing(28)
@@ -115,9 +139,16 @@ class StepDecision(Page):
         self.smaa_sentence = label("", "Sentence", wrap=True)
         self.smaa_sentence.hide()
         up.body.addWidget(self.smaa_sentence)
+        self.busy = QProgressBar()
+        self.busy.setRange(0, 0)                 # indeterminate: moves while the futures are computed
+        self.busy.setTextVisible(False)
+        self.busy.setFixedHeight(6)
+        self.busy.hide()
+        up.body.addWidget(self.busy)
         up.body.addWidget(TrLabel("dec.acc", "SectionTitle"))
-        self.acc_chart = HBarChart()
+        self.acc_chart = RankHeatmap()
         up.body.addWidget(self.acc_chart)
+        up.body.addWidget(ReadMore("dec.acc.more"))
         self.smaa_table = QTableWidget(0, 5)
         self.smaa_table.setObjectName("Ledger")
         self.smaa_table.verticalHeader().setVisible(False)
@@ -134,6 +165,8 @@ class StepDecision(Page):
 
         for c in (self.odds, self.sure, self.draws):
             c.picked.connect(lambda v, c=c: (c.set_value(v), self._stale()))
+        self.sure.picked.connect(lambda _: self.draw_map())
+        self.axes.picked.connect(lambda v: (self.axes.set_value(v), self.draw_map()))
         priorities.changed.connect(self.recompute)
         options.changed.connect(self.recompute)
         self.retranslate_buttons()
@@ -184,10 +217,55 @@ class StepDecision(Page):
         rho = (corr.sum() - k) / (k * k - k) if k > 1 else 1.0
         all_same = all(self.rankings[m].rank[order[0]] == 1 for m in RK.METHODS)
         self.agree.setText(tr("dec.agree", rho=num(rho, 2)))
+        self.draw_map()
         best = self.name(self.alts[order[0]].key)
         self.sentence.setText(tr("dec.sentence.all" if all_same else "dec.sentence.some", best=best,
                                  n=sum(int(self.rankings[m].rank[order[0]] == 1) for m in RK.METHODS)))
         self.changed.emit()
+
+    def draw_map(self) -> None:
+        """Winner map for the chosen pair of families, the company's weights and the SMAA cloud."""
+        if len(self.alts) < 2:
+            return
+        fx, fy = AXES[self._value(self.axes, "money-climate")]
+        base = self.priorities.global_weights()
+        x = C.matrix(self.alts)
+        grid = RK.winner_map(x, C.MAXIMISE, lambda a, b: C.split_weights(base, fx, fy, a, b), n=60)
+        fam = C.family_sums(base)
+        kappa = SURE[self._value(self.sure, "mid")]
+        w = S.sample_weights(None if kappa == 0 else base, 600, kappa or 1.0, 7)
+        cloud = np.array([[ws[[i for i, c in enumerate(C.CRITERIA) if c.family == fx]].sum(),
+                           ws[[i for i, c in enumerate(C.CRITERIA) if c.family == fy]].sum()] for ws in w])
+        p = theme.current()
+        palette = [p.ets, p.fueleu, p.imo, p.warn, p.good, "#C9849A", "#8A9A5B", "#5B8FA8", p.faint]
+        names = [self.name(a.key) for a in self.alts]
+        colors = [p.border if a.key == C.DO_NOTHING else palette[i % len(palette)] for i, a in enumerate(self.alts)]
+        self.map.set_data(grid, names, colors, (fam[fx], fam[fy]), cloud,
+                          (tr(f"fam.{fx}"), tr(f"fam.{fy}")))
+        while self.legend.count():
+            it = self.legend.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        present = set(np.unique(grid[grid >= 0]).tolist())
+        for i, nm in enumerate(names):
+            if i not in present:
+                continue
+            share = float((grid == i).sum()) / float((grid >= 0).sum())
+            lab = label(f'<span style="color:{colors[i]}; font-size:14pt">■</span>&nbsp; {nm} — {pct(share)}', "Muted")
+            lab.setTextFormat(Qt.TextFormat.RichText)
+            self.legend.addWidget(lab)
+        self.legend.addWidget(label(f'<span style="color:{RED}; font-size:14pt">●</span>&nbsp; {tr("dec.map.you")}',
+                                    "Muted"))
+        self.legend.itemAt(self.legend.count() - 1).widget().setTextFormat(Qt.TextFormat.RichText)
+        n = grid.shape[0]
+        ix = min(int(fam[fx] * n), n - 1)
+        iy = min(int(fam[fy] * n), n - 1)
+        here = grid[ix, iy] if grid[ix, iy] >= 0 else int(np.argmax(np.bincount(grid[grid >= 0])))
+        inside = []
+        for xs, ys in cloud:
+            i2, j2 = min(int(xs * n), n - 1), min(int(ys * n), n - 1)
+            inside.append(grid[i2, j2] == here if grid[i2, j2] >= 0 else True)
+        self.map_note.setText(tr("dec.map.note", name=names[here], share=pct(float(np.mean(inside)))))
 
     def _stale(self) -> None:
         self.status.setText(tr("dec.smaa.stale") if self.smaa is not None else tr("dec.smaa.ready"))
@@ -203,6 +281,7 @@ class StepDecision(Page):
         odds = ODDS[self._value(self.odds, "equal")]
         self.status.setText(tr("dec.smaa.running", n=num(n)))
         self.run_btn.setEnabled(False)
+        self.busy.show()
         self._thread = QThread(self)
         self._worker = Worker(sim, self.priorities.global_weights(), n, kappa, odds)
         self._worker.moveToThread(self._thread)
@@ -212,6 +291,7 @@ class StepDecision(Page):
         self._thread.start()
 
     def _cleanup(self) -> None:
+        self.busy.hide()
         if self._thread is not None:
             self._thread.quit()
             self._thread.wait()
@@ -232,14 +312,11 @@ class StepDecision(Page):
         self.status.setText(tr("dec.smaa.done", n=num(res.n)))
         order = np.argsort(res.expected_rank(), kind="stable")
         names = [self.name(res.keys[i]) for i in order]
-        p = theme.current()
-        ramp = [p.accent, p.good, p.ets, p.fueleu, p.imo, p.warn, p.bad, p.faint, p.muted, p.border]
         a = len(res.keys)
-        series = [(tr("dec.rank", r=r + 1), [float(res.acceptability[i, r]) for i in order], ramp[min(r, len(ramp) - 1)])
-                  for r in range(min(a, 6))]
-        if a > 6:
-            series.append((tr("dec.rank.rest"), [float(res.acceptability[i, 6:].sum()) for i in order], p.faint))
-        self.acc_chart.set_data(names, series)
+        exp = res.expected_rank()
+        ref = next((r for r, i in enumerate(order) if res.keys[i] == C.DO_NOTHING), -1)
+        self.acc_chart.set_data(names, res.acceptability[order], [exp[i] for i in order], 0, ref,
+                                (tr("dec.rank.short"), tr("dec.exp_rank"), tr("dec.recommended"), tr("dec.reference")))
         heads = [tr("col.option"), tr("dec.first"), tr("dec.exp_rank"), tr("dec.conf"), tr("dec.central")]
         self.smaa_table.setHorizontalHeaderLabels(heads)
         self.smaa_table.setRowCount(a)
@@ -289,7 +366,7 @@ class StepDecision(Page):
         self.run_btn.setText(amp(tr("dec.run")))
 
     def on_language(self) -> None:
-        for c in (self.odds, self.sure, self.draws):
+        for c in (self.odds, self.sure, self.draws, self.axes):
             c.retranslate()
         self.retranslate_buttons()
         self.recompute()
@@ -297,7 +374,7 @@ class StepDecision(Page):
             self.show_smaa(self.smaa)
 
     def on_theme(self) -> None:
-        self.acc_chart.restyle()
+        self.acc_chart.update()
         self.recompute()
         if self.smaa is not None:
             self.show_smaa(self.smaa)

@@ -87,9 +87,12 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
                       opt.mcda_settings(), opt.rules)
     dec.show_smaa(S.run(sim, True, pri.global_weights(), n=10000, kappa=100))
     app.processEvents()
-    dec.verticalScrollBar().setValue(dec.verticalScrollBar().maximum() // 3)
+    dec.ensureWidgetVisible(dec.map, 0, 40)
     app.processEvents()
     w.grab().save(str(out / f"step5-{lang}-{pal.name}.png"))
+    dec.ensureWidgetVisible(dec.acc_chart, 0, 40)
+    app.processEvents()
+    w.grab().save(str(out / f"step5-smaa-{lang}-{pal.name}.png"))
     w.new_project()                                   # a standard ship from the library
     pv = w.project_view
     pv.ship_step.set_mode("standard")

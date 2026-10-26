@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -18,7 +19,7 @@ from PySide6.QtWidgets import (
 from .. import __version__, i18n
 from ..data.projects import Project, ProjectStore
 from ..i18n import tr
-from . import theme
+from . import anim, theme
 from .lobby import Lobby
 from .project_view import ProjectView
 from .state import AppState
@@ -128,6 +129,16 @@ class MainWindow(QMainWindow):
         h.addSpacing(8)
         self.theme_switch = Segmented([("light", "☀"), ("dark", "☾")], theme.current().name, self.set_theme, small=True)
         h.addWidget(self.theme_switch)
+        h.addSpacing(8)
+        self.anim_btn = QToolButton()
+        self.anim_btn.setObjectName("AnimToggle")
+        self.anim_btn.setText("\u2726")
+        self.anim_btn.setCheckable(True)
+        on = self.settings.value("animations", "1") != "0"
+        anim.set_enabled(on and anim.enabled())
+        self.anim_btn.setChecked(anim.enabled())
+        self.anim_btn.toggled.connect(self.set_animations)
+        h.addWidget(self.anim_btn)
         self.version = label(f"v{__version__}", "TopLabel")
         h.addWidget(self.version)
         return bar
@@ -169,7 +180,12 @@ class MainWindow(QMainWindow):
         self.project_view.on_theme()
         self.lobby.bg.update()
 
+    def set_animations(self, on: bool) -> None:
+        anim.set_enabled(on)
+        self.settings.setValue("animations", "1" if on else "0")
+
     def retranslate(self) -> None:
+        self.anim_btn.setToolTip(tr("top.anim"))
         self.settings.setValue("language", i18n.language())
         self.setWindowTitle(tr("app.name"))
         for w in (self.wordmark, self.tagline, self.view_label):

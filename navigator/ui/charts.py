@@ -6,7 +6,7 @@ import pyqtgraph as pg
 from PySide6.QtGui import QColor
 
 from ..i18n import num
-from . import theme
+from . import anim, theme
 
 pg.setConfigOptions(antialias=True)
 
@@ -81,18 +81,25 @@ class StackedBarChart(pg.PlotWidget):
 
     def set_data(self, years: list[int], series: list[tuple[str, list[float], str]],
                  line: tuple[str, list[float | None], str] | None = None) -> None:
+        """Bars grow from zero to their values (see ui.anim); the axis is fixed at the final scale."""
+        anim.tween(self, 0.0, 1.0, lambda k: self._draw(years, series, line, k), ms=380)
+
+    def _draw(self, years, series, line, k: float) -> None:
         self.clear()
         if self.legend is None:
             self.legend = self.addLegend(offset=(8, 4), colCount=len(series) + 1)
         self.legend.clear()
         self.legend.setLabelTextColor(theme.current().muted)
         base = [0.0] * len(years)
+        final = [0.0] * len(years)
         for name, vals, color in series:
-            item = pg.BarGraphItem(x=years, height=vals, y0=base, width=0.66, brush=QColor(color), pen=pg.mkPen(None),
+            grown = [v * k for v in vals]
+            item = pg.BarGraphItem(x=years, height=grown, y0=base, width=0.66, brush=QColor(color), pen=pg.mkPen(None),
                                    name=name)
             self.addItem(item)            # named items join the legend automatically
-            base = [b + v for b, v in zip(base, vals, strict=True)]
-        top = max(base, default=0)
+            base = [b + v for b, v in zip(base, grown, strict=True)]
+            final = [b + v for b, v in zip(final, vals, strict=True)]
+        top = max(final, default=0)
         if line:
             name, vals, color = line
             pts = [(y, v) for y, v in zip(years, vals, strict=True) if v is not None]
