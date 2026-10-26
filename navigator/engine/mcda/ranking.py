@@ -122,3 +122,54 @@ def winner_map(x, maximise, weights_at, n: int = 60) -> np.ndarray:
             if a + b <= 1.0:
                 out[i, j] = int(np.argmax(z @ weights_at(a, b)))
     return out
+
+
+def _clip(poly: list[tuple[float, float]], f) -> list[tuple[float, float]]:
+    """Sutherland–Hodgman: keep the part of a convex polygon where the affine function f ≥ 0."""
+    out: list[tuple[float, float]] = []
+    n = len(poly)
+    for k in range(n):
+        p, q = poly[k], poly[(k + 1) % n]
+        fp, fq = f(*p), f(*q)
+        if fp >= 0:
+            out.append(p)
+        if (fp >= 0) != (fq >= 0):
+            t = fp / (fp - fq)
+            out.append((p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])))
+    return out
+
+
+def affine_scores(x, maximise, weights_at) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """SAW scores as s(a, b) = s0 + a·sa + b·sb, for weights that are affine in (a, b)."""
+    z = minmax(np.asarray(x, float), np.asarray(maximise, bool))
+    s0 = z @ weights_at(0.0, 0.0)
+    return s0, z @ weights_at(1.0, 0.0) - s0, z @ weights_at(0.0, 1.0) - s0
+
+
+def winner_regions(x, maximise, weights_at) -> list[list[tuple[float, float]]]:
+    """Exact SAW winner regions over (a, b) with a + b ≤ 1, as one convex polygon per alternative
+    (empty if it never wins). Valid because `weights_at` is affine in (a, b), so each score is too;
+    ties go to the lower index, as in `winner_map`."""
+    s0, sa, sb = affine_scores(x, maximise, weights_at)
+    eps = 1e-12
+    out = []
+    for i in range(len(s0)):
+        poly = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
+        for j in range(len(s0)):
+            if j == i or not poly:
+                continue
+            d0, da, db = s0[i] - s0[j], sa[i] - sa[j], sb[i] - sb[j]
+            tie = -eps if j > i else eps
+            poly = _clip(poly, lambda a, b, d0=d0, da=da, db=db, tie=tie: d0 + a * da + b * db + tie)
+        out.append(poly if len(poly) >= 3 else [])
+    return out
+
+
+def polygon_area(poly) -> float:
+    if len(poly) < 3:
+        return 0.0
+    s = 0.0
+    for k in range(len(poly)):
+        (x1, y1), (x2, y2) = poly[k], poly[(k + 1) % len(poly)]
+        s += x1 * y2 - x2 * y1
+    return abs(s) / 2

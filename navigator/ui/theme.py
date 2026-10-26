@@ -162,6 +162,10 @@ QToolButton#Fold:hover, QToolButton#Fold:checked {{ color: {p.accent}; }}
 #Warn {{ color: {p.bad}; font-size: 9.5pt; }}
 QToolButton#Reset {{ font-size: 15pt; color: {p.muted}; background: transparent; border: 1px solid {p.border};
     border-radius: 14px; min-width: 26px; min-height: 26px; padding: 0 0 2px 0; }}
+QToolButton#ViewChip {{ color: {p.faint}; background: {p.panel}; border: 1px solid {p.border}; border-radius: 4px;
+    min-width: 22px; min-height: 20px; padding: 0 3px; font-size: 10pt; }}
+QToolButton#ViewChip:hover {{ color: {p.accent}; border-color: {p.accent}; }}
+QToolButton#ViewChip:checked {{ color: {p.accent_text}; background: {p.accent}; border-color: {p.accent}; }}
 QToolButton#AnimToggle {{ color: {p.faint}; background: transparent; border: 1px solid {p.border}; border-radius: 4px;
     min-width: 26px; min-height: 22px; font-size: 11pt; }}
 QToolButton#AnimToggle:checked {{ color: {p.accent}; border-color: {p.accent}; background: {p.shallow}; }}

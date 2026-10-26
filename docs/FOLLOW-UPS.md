@@ -24,6 +24,9 @@ reminds the author when an item becomes due. Tick items off with the commit that
       the sliders or the step-4 layout but has no alternative yet: no change for now.
 - [x] Charts, first batch (0011): rank heatmap and priority map in step 5 (company's weights in red), quiet
       animations with an off switch in the top bar.
+- [x] Charts, second batch (0012): every chart morphs on each change (FA style); fan of futures, option
+      profile radars, ship's radar of weights, exact priority map, turnable 3D surface, donuts; two views
+      where two fit, switched by small chips. The author to review on Windows.
 - [ ] Charts, next batch (in this order): the ship against the fleet (scatter), MAC curve, method-agreement
       heatmap.
 

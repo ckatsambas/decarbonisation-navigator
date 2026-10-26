@@ -4,6 +4,9 @@
 - **Status:** accepted
 
 ## Charts
+> Superseded for on-screen charts by [0012](0012-animated-charts.md) (hand-drawn QPainter charts
+> that morph on every change, as in Financial Architect). matplotlib for print figures stands.
+
 - **pyqtgraph** for interactive on-screen charts (fast enough to redraw while sliders move,
   and for SMAA distributions with tens of thousands of points).
 - **matplotlib** for print-quality figures in the PDF report and in the thesis, so the thesis

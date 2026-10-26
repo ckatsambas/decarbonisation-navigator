@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decarbonisation-navigator"
-version = "0.1.3"
+version = "0.1.5"
 description = "Multi-criteria evaluation of ship decarbonisation investments under the IMO Net-Zero Framework, EU ETS and FuelEU Maritime"
 authors = [{ name = "Christos Katsampas" }]
 requires-python = ">=3.12"
@@ -15,7 +15,6 @@ dependencies = [
   "scipy>=1.13",
   "pandas>=2.2",
   "openpyxl>=3.1",
-  "pyqtgraph>=0.13.7",
   "matplotlib>=3.9",
   "python-calamine>=0.3",
 ]

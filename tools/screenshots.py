@@ -87,12 +87,29 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
                       opt.mcda_settings(), opt.rules)
     dec.show_smaa(S.run(sim, True, pri.global_weights(), n=10000, kappa=100))
     app.processEvents()
-    dec.ensureWidgetVisible(dec.map, 0, 40)
+    dec.ensureWidgetVisible(dec.views, 0, 40)
     app.processEvents()
     w.grab().save(str(out / f"step5-{lang}-{pal.name}.png"))
-    dec.ensureWidgetVisible(dec.acc_chart, 0, 40)
+    dec.ensureWidgetVisible(dec.fan, 0, 40)
     app.processEvents()
     w.grab().save(str(out / f"step5-smaa-{lang}-{pal.name}.png"))
+    # every view of every switchable chart, one image each (docs/screenshots/views)
+    views = out / "views"
+    views.mkdir(exist_ok=True)
+    suffix = f"{lang}-{pal.name}"
+    for name, sw in (("profiles", dec.profiles), ("robustness", dec.views), ("ranks", dec.acc_views)):
+        for i in range(len(sw.buttons)):
+            sw.set_index(i)
+            app.processEvents()
+            sw.grab().save(str(views / f"step5-{name}-{i}-{suffix}.png"))
+        sw.set_index(0)
+    dec.fan.grab().save(str(views / f"step5-fan-{suffix}.png"))
+    for name, sw in (("step2", pv.position_step.chart_views), ("step4", pri.chart_views)):
+        for i in range(len(sw.buttons)):
+            sw.set_index(i)
+            app.processEvents()
+            sw.grab().save(str(views / f"{name}-{i}-{suffix}.png"))
+        sw.set_index(0)
     w.new_project()                                   # a standard ship from the library
     pv = w.project_view
     pv.ship_step.set_mode("standard")

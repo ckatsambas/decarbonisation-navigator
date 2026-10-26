@@ -17,3 +17,4 @@ and what follows from it. These notes are the raw material for thesis chapter 6
 | [0009](0009-phase3-plan.md) | Phase 3 plan: 25 adaptive measures, IMO-study power model, fuel price paths, NPV |
 | [0010](0010-phase4-plan.md) | Phase 4 plan: criteria tree, BWM/AHP, four ranking methods + consensus, SMAA-2 on inputs and weights |
 | [0011](0011-decision-graphics.md) | Decision graphics: rank heatmap, priority map over two family weights, quiet animations with an off switch |
+| [0012](0012-animated-charts.md) | Animated QPainter charts in every step; fan of futures, radars, donut, exact priority map, turnable 3D; switchable views |

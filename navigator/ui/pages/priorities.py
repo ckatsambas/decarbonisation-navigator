@@ -26,7 +26,9 @@ from ...engine.mcda import criteria as C
 from ...engine.mcda import weights as W
 from ...i18n import eur_short, num, pct, tr
 from .. import theme
-from ..charts import HBarChart
+from ..charts import HBarChart, Switchable
+from ..maps import FAMILY_COLORS, RED
+from ..radar import ProfileRadar
 from ..widgets import Panel, ReadMore, TrLabel, label
 from .base import Page
 from .position import Choice
@@ -330,7 +332,9 @@ class StepPriorities(Page):
 
         rp = Panel("pri.result")
         self.chart = HBarChart()
-        rp.body.addWidget(self.chart)
+        self.radar = ProfileRadar(grid=False, min_h=380)
+        self.chart_views = Switchable([("▤", tr("view.bars"), self.chart), ("◎", tr("view.radar.simple"), self.radar)])
+        rp.body.addWidget(self.chart_views)
         rp.body.addWidget(TrLabel("pri.compare", "SectionTitle"))
         self.cmp = QTableWidget(len(C.CRITERIA), 4)
         self.cmp.setObjectName("Ledger")
@@ -397,7 +401,25 @@ class StepPriorities(Page):
         p = theme.current()
         self.chart.set_data([tr(f"crit.{c.key}") for c in C.CRITERIA], [("", list(self.weights), p.accent)])
         self._data_weights(self.options.alternatives())
+        self.draw_radar()
         self.changed.emit()
+
+    def draw_radar(self) -> None:
+        """The company's weights against the data-driven ones (entropy, CRITIC), on one radar."""
+        alts = self.options.alternatives()
+        sets = [(tr("pri.radar.you"), self.weights, RED, True)]
+        if len(alts) >= 2:
+            x = C.matrix(alts)
+            p = theme.current()
+            sets += [(tr("pri.entropy"), W.entropy(x, C.MAXIMISE).weights, p.ets, False),
+                     (tr("pri.critic"), W.critic(x, C.MAXIMISE).weights, p.fueleu, False)]
+        top = max(float(np.max(w)) for _n, w, _c, _e in sets) * 1.1
+        step = 0.05 if top < 0.3 else 0.1
+        top = step * np.ceil(top / step)
+        self.radar.set_data([tr(f"crit.{c.key}") for c in C.CRITERIA], [tr(f"crit.short.{c.key}") for c in C.CRITERIA],
+                            [FAMILY_COLORS[c.family] for c in C.CRITERIA],
+                            [(n, np.asarray(w) / top, c, e, [pct(v, 1) for v in w]) for n, w, c, e in sets],
+                            ring_fmt=lambda k: pct(k * top))
 
     def _data_weights(self, alts) -> None:
         self.cmp.setHorizontalHeaderLabels([tr("col.criterion"), tr("pri.yours"), tr("pri.entropy"), tr("pri.critic")])
@@ -440,4 +462,5 @@ class StepPriorities(Page):
 
     def on_theme(self) -> None:
         self.chart.restyle()
+        self.radar.restyle()
         self.update_weights()
