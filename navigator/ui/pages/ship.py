@@ -113,10 +113,19 @@ class MrvImporter(QObject):
         self._worker = ImportWorker(files, self.state.db_path)
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
-        self._worker.progress.connect(lambda i, n, f: (dlg.setValue(i), dlg.setLabelText(tr("import.progress", file=f))))
-        self._worker.finished.connect(lambda res: self._done(res, dlg))
+        # bound methods (not lambdas), so Qt queues them into the interface thread
+        self._dlg = dlg
+        self._worker.progress.connect(self._progress)
+        self._worker.finished.connect(self._finished)
         self._worker.finished.connect(self._thread.quit)
         self._thread.start()
+
+    def _progress(self, i: int, _n: int, f: str) -> None:
+        self._dlg.setValue(i)
+        self._dlg.setLabelText(tr("import.progress", file=f))
+
+    def _finished(self, result) -> None:
+        self._done(result, self._dlg)
 
     def _done(self, result, dlg: QProgressDialog) -> None:
         dlg.close()
