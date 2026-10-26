@@ -97,3 +97,38 @@ def test_budget_limits_each_year(ship):
         for k, y in r.plan.installs:
             per[y] = per.get(y, 0) + libd[k].capex_usd(model.power, model.cls, 0.5) * RULES.nzf.eur_per_usd
         assert max(per.values()) <= budget * 1.0001
+
+
+def test_adaptive_plan_shares_the_first_stage(ship):
+    from navigator.engine import optimise as O
+    lib, model, sc = ship
+    libd = {k: lib[k] for k in lib_keys(lib)}
+    ad = O.adaptive(model, libd, KEYS[:6], sc, O.Settings(start=2027, window=6), RULES, decide_after=2028)
+    assert len(ad.branches) == 9 and sum(b.prob for b in ad.branches) == pytest.approx(1)
+    for b in ad.branches:
+        assert Plan_now(b.plan, 2028) == ad.now.installs
+    assert ad.value_of_flexibility >= -1e-6 * max(abs(ad.expected_rigid), 1)
+
+
+def Plan_now(plan, year):
+    return tuple((k, y) for k, y in plan.installs if y <= year)
+
+
+def test_smaa_prices_a_timed_plan_like_the_scalar_engine(ship):
+    import numpy as np
+
+    from navigator.engine.mcda import criteria as C
+    from navigator.engine.mcda import smaa as S
+    lib, model, sc = ship
+    libd = {k: lib[k] for k in lib_keys(lib)}
+    plan = P.Plan.of({"hull_coating": 2027, "rotor_sails": 2029, "biofuel_blend": 2031})
+    st = C.Settings(2027, 20, "central", 0.08)
+    sim = S.Simulator(model, {"plan": tuple(libd[k] for k in plan.keys)}, sc, st, RULES, install={"plan": plan.years})
+    d = S.Draws.likely(["plan"], 2, model, sc, RULES, EC.default_prices(), st)
+    out = sim.npv("plan", d)
+    a = P.appraise_plan(model, libd, plan, sc, 0.5, "central", 0.08, end=st.end, rules=RULES, first_year=2027)
+    assert out["npv"] == pytest.approx(np.full(2, a.npv), rel=1e-6, abs=5.0)
+    assert out["avoided"] == pytest.approx(np.full(2, a.co2e_avoided), rel=1e-6)
+    alt = C.plan_alternative(model, libd, plan, sc, st, RULES, "plan")
+    assert alt.values["npv"] == pytest.approx(a.npv) and 0 < alt.values["cut"] < 1
+    assert out["cut"] == pytest.approx(np.full(2, alt.values["cut"]), rel=1e-6)

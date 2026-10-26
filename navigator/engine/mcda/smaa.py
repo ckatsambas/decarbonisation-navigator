@@ -125,6 +125,38 @@ def _physics(model: ShipModel, ms: tuple[Measure, ...], rules: Rules, start: int
     return Physics(fe_in=fe_in, fe_target=fe_target, fuel_t=fuel_t, grid_kwh=grid_kwh, hours=hours, wtw=wtw, **out)
 
 
+class PlanPhysics:
+    """A timed plan: the physics of the set of measures working in each year (decision 0014).
+    `at()` returns the same keys as `Physics.at`, with the yearly scalars (fuel, shore power, hours,
+    well-to-wake) as (K, Y) arrays."""
+
+    YEARLY = ("fuel_t", "grid_kwh", "hours", "wtw")
+
+    def __init__(self, segments: list[tuple[int, Physics]]):
+        self.segments = sorted(segments, key=lambda s: s[0])     # (first year, physics of the set)
+        self.grid_kwh = self.segments[-1][1].grid_kwh
+
+    def at(self, q: np.ndarray) -> dict:
+        years = np.arange(FIRST_YEAR, 2051)
+        parts = [(y0, ph.at(q)) for y0, ph in self.segments]
+        k = len(q)
+        out = {key: parts[0][1][key].copy() for key in ("allowances", "fe_energy", "fe_int", "nzf_energy", "nzf_gfi")}
+        fuels = set().union(*(p[1]["fuel_t"].keys() for p in parts))
+        out["fuel_t"] = {f: np.zeros((k, len(years))) for f in fuels}
+        for key in ("grid_kwh", "hours", "wtw"):
+            out[key] = np.zeros((k, len(years)))
+        for n, (y0, ph) in enumerate(parts):
+            y1 = parts[n + 1][0] if n + 1 < len(parts) else 2051
+            cols = (years >= y0) & (years < y1)
+            for key in ("allowances", "fe_energy", "fe_int", "nzf_energy", "nzf_gfi"):
+                out[key][:, cols] = ph[key][:, cols]
+            for f in fuels:
+                out["fuel_t"][f][:, cols] = ph["fuel_t"].get(f, np.zeros(k))[:, None]
+            for key in ("grid_kwh", "hours", "wtw"):
+                out[key][:, cols] = ph[key][:, None]
+        return out
+
+
 # ------------------------------------------------------------------ draws
 @dataclass
 class Draws:
@@ -207,13 +239,26 @@ class Simulator:
     """Prepared once per ship and shortlist; `npv()` evaluates any set of draws."""
 
     def __init__(self, model: ShipModel, alternatives: dict[str, tuple[Measure, ...]], scenario: Scenario,
-                 st: C.Settings, rules: Rules | None = None, prices: EC.Prices | None = None):
+                 st: C.Settings, rules: Rules | None = None, prices: EC.Prices | None = None,
+                 install: dict[str, dict[str, int]] | None = None):
+        """`install` gives, for timed plans, each measure's installation year (others start at st.start)."""
         self.model, self.scenario, self.st = model, scenario, st
         self.rules = rules or Rules.load()
         self.prices = prices or EC.default_prices()
         self.alts = {k: ms for k, ms in alternatives.items() if ms}
+        self.install = {k: dict(v) for k, v in (install or {}).items() if k in self.alts}
         self.base = _physics(model, (), self.rules, st.start, np.array([0.5]))
-        self.phys = {k: _physics(model, ms, self.rules, st.start) for k, ms in self.alts.items()}
+        self.phys = {}
+        for k, ms in self.alts.items():
+            yrs = self.install.get(k)
+            if not yrs or len(set(yrs.values())) == 1 and min(yrs.values()) == st.start:
+                self.phys[k] = _physics(model, ms, self.rules, st.start)
+                continue
+            segs = [(FIRST_YEAR, self.base)]
+            for y0 in sorted(set(yrs.values())):
+                act = tuple(m for m in ms if yrs.get(m.key, st.start) <= y0)
+                segs.append((y0, _physics(model, act, self.rules, FIRST_YEAR)))
+            self.phys[k] = PlanPhysics(segs)
         self.years = np.arange(FIRST_YEAR, 2051)
         nz = self.rules.nzf
         tgt = np.full((len(SCENARIOS), len(self.years), 2), np.nan)
@@ -302,7 +347,7 @@ class Simulator:
             u = d.fossil if f in FOSSIL else d.alt
             p = np.stack([_level(series["low"].at(int(y)), series["central"].at(int(y)), series["high"].at(int(y)), u)
                           for y in years], axis=1)
-            out += t[:, None] * p
+            out += (t[:, years - FIRST_YEAR] if t.ndim == 2 else t[:, None]) * p
         return out * usd
 
     def npv(self, key: str, d: Draws, scenario_index: np.ndarray | None = None) -> dict[str, np.ndarray]:
@@ -324,36 +369,46 @@ class Simulator:
         fuel = (self._fuel_cost(bph["fuel_t"], d, years) - self._fuel_cost(ph["fuel_t"], d, years)) * scale[:, None]
         elec_p = _level(pr.electricity_eur_kwh["low"], pr.electricity_eur_kwh["central"],
                         pr.electricity_eur_kwh["high"], d.elec)
-        elec = -(ph["grid_kwh"] * elec_p * scale)[:, None] * np.ones(len(years))
+        def per_year(a: np.ndarray) -> np.ndarray:              # (K,) or (K, Y_all) → (K, years)
+            return a[:, idx] if a.ndim == 2 else a[:, None] * np.ones(len(years))
+
+        elec = -per_year(ph["grid_kwh"]) * (elec_p * scale)[:, None]
         daily = d.earnings * usd
-        d_hours = (ph["hours"] - bph["hours"]) * scale
-        time = (-np.maximum(d_hours, 0) / 24 * daily * d.time_share)[:, None] * np.ones(len(years))
+        d_hours = (per_year(ph["hours"]) - bph["hours"][:, None]) * scale[:, None]
+        time = -np.maximum(d_hours, 0) / 24 * (daily * d.time_share)[:, None]
         qc = d.cost[key]
+        inst = self.install.get(key, {})
         capex_now = np.zeros(d.k)
-        opex = np.zeros(d.k)
+        opex = np.zeros((d.k, len(years)))
         cap = np.zeros((d.k, len(years)))
         off = np.zeros(d.k)
+        offhire = np.zeros((d.k, len(years)))
         for m in ms:
+            s0 = inst.get(m.key, st.start)
             c_m = np.interp(qc, GRID, self._costs[(key, m.key)][0]) * usd
             o_m = np.interp(qc, GRID, self._costs[(key, m.key)][1]) * usd
             capex_now += c_m
-            opex += o_m
             life = max(int(round(m.lifetime.quantile(0.5))), 1)
             for j, y in enumerate(years):
-                if (y - st.start) % life == 0:
-                    cap[:, j] -= c_m
-            used = (st.end - st.start) % life + 1
-            if used < life:
-                cap[:, -1] += c_m * (life - used) / life
-            off += np.asarray(m.offhire_days.from_uniform(d.offhire[key]), float)
-        offhire = np.zeros((d.k, len(years)))
-        offhire[:, 0] = -off * daily
-        flows = fuel + elec + carbon - opex[:, None] + cap + offhire + time
+                if y >= s0:
+                    opex[:, j] += o_m
+                    if (y - s0) % life == 0:
+                        cap[:, j] -= c_m
+            if s0 <= st.end:
+                used = (st.end - s0) % life + 1
+                if used < life:
+                    cap[:, -1] += c_m * (life - used) / life
+            off_m = np.asarray(m.offhire_days.from_uniform(d.offhire[key]), float)
+            off += off_m
+            if st.start <= s0 <= st.end:
+                offhire[:, s0 - st.start] -= off_m * daily
+        flows = fuel + elec + carbon - opex + cap + offhire + time
         disc = (1 + d.rate[:, None]) ** (years[None, :] - 2026)
         npv = (flows / disc).sum(axis=1)
-        avoided_year = (self.base_wtw - ph["wtw"]) * scale
-        return {"npv": npv, "capex": capex_now, "offhire": off, "cut": 1 - ph["wtw"] / self.base_wtw,
-                "avoided": avoided_year * len(years), "flows": flows}
+        wtw = per_year(ph["wtw"])
+        cut = (1 - wtw / self.base_wtw).mean(axis=1)
+        avoided = ((self.base_wtw - wtw) * scale[:, None]).sum(axis=1)
+        return {"npv": npv, "capex": capex_now, "offhire": off, "cut": cut, "avoided": avoided, "flows": flows}
 
     def _base_carbon(self, d: Draws, scale: np.ndarray) -> np.ndarray:
         return self._carbon(self.base.at(np.zeros(d.k)), d, scale)
