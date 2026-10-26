@@ -248,3 +248,56 @@ def test_priorities_reset_buttons(win):
     next(iter(money.ahp.pairs.values())).set_value(-6, emit=True)
     money.reset_btn.click()
     assert all(s.value() == 0 for s in money.ahp.pairs.values())
+
+
+def test_investment_plans_join_the_ranking(win, qtbot, tmp_path):
+    win.new_project()
+    pv = win.project_view
+    pv.ship_step.set_mode("standard")
+    pv.ship_step.std_pane.pick_preset("kamsarmax")
+    pv.ship_step.std_pane.use_btn.click()
+    pv.next_btn.click()
+    pv.next_btn.click()
+    opt = pv.options_step
+    for key in ("hull_coating", "rotor_sails", "biofuel_blend", "propulsion_devices"):
+        opt.set_ticked(key, True)
+    plans = opt.plans
+    plans.cand.set_value("shortlist")
+    plans.window.set_value("5")
+    plans.run()
+    qtbot.waitUntil(lambda: plans.front is not None, timeout=120_000)
+    assert plans.front.plans and plans.results.isVisible() is not None
+    plans.pick(len(plans.front.plans) - 1)
+    plans.add_btn.click()                                        # the deepest-cut plan becomes an option
+    assert len(plans.chosen) == 1
+    alts = opt.alternatives()
+    key = next(iter(plans.chosen))
+    assert any(a.key == key for a in alts) and opt.alt_name(key).startswith(plans.labels[key])
+    plans.run_adaptive()
+    qtbot.waitUntil(lambda: plans.adaptive_result is not None, timeout=120_000)
+    assert len(plans.adaptive_result.branches) == 9
+    pv.next_btn.click()
+    pv.next_btn.click()
+    dec = pv.decision_step
+    assert dec.table.rowCount() == len(alts)
+    dec.draws.set_value("2000")
+    dec.run_smaa()
+    qtbot.waitUntil(lambda: dec.smaa is not None, timeout=60_000)
+    assert key in dec.smaa.keys
+    rep = pv.report_step
+    for lang in ("el", "en"):
+        rep.lang.set_value(lang)
+        pdf = rep.export("pdf", str(tmp_path / f"r-{lang}.pdf"))
+        xlsx = rep.export("xlsx", str(tmp_path / f"r-{lang}.xlsx"))
+        assert pdf.stat().st_size > 20_000 and pdf.read_bytes()[:4] == b"%PDF"
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx)
+        assert len(wb.sheetnames) >= 8
+    from navigator.ui.pages.report import collect
+    data = collect(pv, "en")
+    assert data.plans["adaptive"] and data.smaa["fan"] and len(data.summary) >= 4
+    pv.save_now()
+    pid = pv.project.id
+    win.show_lobby()
+    win.open_project(pid)
+    assert key in win.project_view.options_step.plans.chosen

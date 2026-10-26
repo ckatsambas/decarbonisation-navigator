@@ -87,3 +87,22 @@ def eur_short(x: float) -> str:
 
 def pct(x: float, digits: int = 0) -> str:
     return f"{num(x * 100, digits)}%"
+
+
+class using:  # noqa: N801 - used as a context manager: `with using("en"): ...`
+    """Text and numbers in another language for a while, without notifying the interface (reports)."""
+
+    def __init__(self, lang: str):
+        if lang not in LANGUAGES:
+            raise ValueError(f"Unsupported language: {lang}")
+        self.lang = lang
+
+    def __enter__(self):
+        global _current
+        self.prev, _current = _current, self.lang
+        return self
+
+    def __exit__(self, *exc):
+        global _current
+        _current = self.prev
+        return False
