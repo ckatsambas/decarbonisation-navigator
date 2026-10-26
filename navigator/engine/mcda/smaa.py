@@ -380,6 +380,9 @@ class SmaaResult:
         return self.acceptability @ r
 
 
+FAN_PATHS = 400          # futures kept as yearly paths for the fan chart (decision 0012)
+
+
 def sample_weights(center: np.ndarray | None, n: int, kappa: float, seed: int) -> np.ndarray:
     """Dirichlet around the company weights (concentration κ), or uniform on the simplex if none."""
     rng = np.random.default_rng(seed + 7)
@@ -400,8 +403,13 @@ def run(sim: Simulator, include_do_nothing: bool = True, center_weights: np.ndar
     lib = {a: sim.alts[a] for a in keys}
     as_drafted = np.full(n, SCENARIOS.index("as_drafted"))
     not_adopted = np.full(n, SCENARIOS.index("not_adopted"))
+    fan = min(n, FAN_PATHS)
+    years = np.arange(sim.st.start, sim.st.end + 1)
+    disc = (1 + d.rate[:fan, None]) ** (years[None, :] - 2026)
+    paths = {}
     for j, a in enumerate(keys):
         r = sim.npv(a, d)
+        paths[a] = np.cumsum(r["flows"][:fan] / disc, axis=1).astype(np.float32)
         ms = lib[a]
         vals["npv"][:, j] = r["npv"]
         vals["capex"][:, j] = r["capex"]
@@ -440,4 +448,6 @@ def run(sim: Simulator, include_do_nothing: bool = True, center_weights: np.ndar
             continue
         ui = np.einsum("kac,c->ka", z, central[i])
         conf[i] = (ui.argmax(axis=1) == i).mean()
-    return SmaaResult(keys, acc, central, conf, vals, w, n, {"bounds": (lo, hi)})
+    details = {"bounds": (lo, hi), "years": years, "paths": paths, "winner": order[:, 0].astype(np.int16),
+               "drivers": {"eua": d.eua[:fan], "fossil": d.fossil[:fan], "scenario": d.scenario[:fan]}}
+    return SmaaResult(keys, acc, central, conf, vals, w, n, details)

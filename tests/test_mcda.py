@@ -125,3 +125,29 @@ def test_priority_map_helpers():
     x = np.array([[1.0, 0.0], [0.0, 1.0]])
     grid = RK.winner_map(x, np.array([True, True]), lambda a, b: np.array([a, b]), n=10)
     assert grid[9, 0] == 0 and grid[0, 9] == 1 and grid[9, 9] == -1
+
+
+def test_winner_regions_match_the_grid():
+    fam = {"money": 0.4, "climate": 0.3, "technology": 0.1, "operations": 0.1, "regulation": 0.1}
+    base = C.global_weights(fam, {"money": {"npv": 0.75, "capex": 0.25}})
+    rng = np.random.default_rng(3)
+    x = rng.uniform(0, 1, (5, len(C.KEYS)))
+
+    def at(a, b):
+        return C.split_weights(base, "money", "climate", a, b)
+
+    regions = RK.winner_regions(x, C.MAXIMISE, at)
+    assert sum(RK.polygon_area(p) for p in regions) == pytest.approx(0.5, abs=1e-9)
+    grid = RK.winner_map(x, C.MAXIMISE, at, n=40)
+    shares = [(grid == i).sum() / (grid >= 0).sum() for i in range(5)]
+    assert [RK.polygon_area(p) / 0.5 for p in regions] == pytest.approx(shares, abs=0.04)
+
+
+def test_smaa_keeps_paths_that_end_at_the_npv(sim):
+    s, *_ = sim
+    r = S.run(s, True, C.global_weights({f: 0.2 for f in C.FAMILIES}, {}), n=600)
+    k = r.keys[0]
+    paths = r.details["paths"][k]
+    assert paths.shape == (S.FAN_PATHS, len(r.details["years"]))
+    assert paths[:, -1] == pytest.approx(r.values["npv"][: S.FAN_PATHS, 0], rel=1e-4, abs=50)
+    assert r.details["winner"].shape == (600,)

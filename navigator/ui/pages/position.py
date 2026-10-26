@@ -10,7 +10,8 @@ from ...engine.compliance import BASELINES, YEARS, Rules, evaluate
 from ...engine.regulation.imo_nzf import SCENARIOS
 from ...i18n import eur_short, num, pct, tr
 from .. import anim, theme
-from ..charts import StackedBarChart
+from ..charts import StackedBarChart, Switchable
+from ..donut import Donut3D
 from ..widgets import Fold, Panel, ReadMore, TrLabel, amp, label
 from .base import Page
 from .regulation import Inputs, Results, spin
@@ -128,7 +129,9 @@ class StepPosition(Page):
         cp = Panel("chart.overview")
         self.chart = StackedBarChart(axis="money")
         self.chart.setMinimumHeight(300)
-        cp.body.addWidget(self.chart)
+        self.donut = Donut3D(min_h=340)
+        self.chart_views = Switchable([("▮▮", tr("view.bars"), self.chart), ("◔", tr("view.donut.cost"), self.donut)])
+        cp.body.addWidget(self.chart_views)
         self.lay.addWidget(cp)
 
         # --- everything else, folded
@@ -224,6 +227,12 @@ class StepPosition(Page):
         self.chart.set_data(years, [(tr("legend.ets_cost"), [x.ets.cost for x in self.results], p.ets),
                                     (tr("legend.fueleu"), [x.fueleu_cost for x in self.results], p.fueleu),
                                     (tr("legend.nzf"), [max(x.nzf.cost_eur, 0) for x in self.results], p.imo)])
+        parts = [(tr("legend.ets_cost"), sum(x.ets.cost for x in self.results), p.ets),
+                 (tr("legend.fueleu"), sum(max(x.fueleu_cost, 0) for x in self.results), p.fueleu),
+                 (tr("legend.nzf"), sum(max(x.nzf.cost_eur, 0) for x in self.results), p.imo)]
+        self.donut.set_data([(n, v, c, eur_short(v)) for n, v, c in parts if v > 0],
+                            tr("pos.donut.caption", a=years[0], b=years[-1], total=eur_short(sum(v for _n, v, _c in parts))),
+                            tr("pos.donut.empty"))
         self.computed.emit()
 
     @staticmethod
