@@ -264,8 +264,15 @@ def test_investment_plans_join_the_ranking(win, qtbot, tmp_path):
     plans = opt.plans
     plans.cand.set_value("shortlist")
     plans.window.set_value("5")
+    from PySide6.QtCore import QThread
+    from PySide6.QtWidgets import QApplication
+    threads = []
+    original = plans.show_front
+    plans.show_front = lambda fr: (threads.append(QThread.currentThread()), original(fr))
     plans.run()
     qtbot.waitUntil(lambda: plans.front is not None, timeout=120_000)
+    assert threads and threads[0] == QApplication.instance().thread()      # crash of 26 Oct: widgets from the worker
+    plans.show_front = original
     assert plans.front.plans and plans.results.isVisible() is not None
     plans.pick(len(plans.front.plans) - 1)
     plans.add_btn.click()                                        # the deepest-cut plan becomes an option

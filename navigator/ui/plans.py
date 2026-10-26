@@ -414,11 +414,25 @@ class PlansPanel(Panel):
         self._job = Job(fn)
         self._job.moveToThread(self._thread)
         self._thread.started.connect(self._job.run)
-        self._job.progress.connect(lambda x: self.busy.setValue(int(100 * x)))
-        self._job.done.connect(lambda res: (self._cleanup(), done(res)))
-        self._job.failed.connect(lambda msg: (self._cleanup(), self.status.setText(tr("plan.failed", msg=msg))))
+        # bound methods of this widget, so Qt queues the calls into the interface thread (a lambda would
+        # run in the worker thread and touch widgets from there: the crash of 26 Oct)
+        self._done = done
+        self._job.progress.connect(self._on_progress)
+        self._job.done.connect(self._on_done)
+        self._job.failed.connect(self._on_failed)
         self._thread.start()
         return True
+
+    def _on_progress(self, x: float) -> None:
+        self.busy.setValue(int(100 * x))
+
+    def _on_done(self, res) -> None:
+        self._cleanup()
+        self._done(res)
+
+    def _on_failed(self, msg: str) -> None:
+        self._cleanup()
+        self.status.setText(tr("plan.failed", msg=msg))
 
     def _cleanup(self) -> None:
         self.busy.hide()
