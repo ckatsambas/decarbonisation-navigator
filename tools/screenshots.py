@@ -97,7 +97,8 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     views = out / "views"
     views.mkdir(exist_ok=True)
     suffix = f"{lang}-{pal.name}"
-    for name, sw in (("profiles", dec.profiles), ("robustness", dec.views), ("ranks", dec.acc_views)):
+    dec.acc_chart.grab().save(str(views / f"step5-ranks-{suffix}.png"))
+    for name, sw in (("profiles", dec.profiles), ("robustness", dec.views)):
         for i in range(len(sw.buttons)):
             sw.set_index(i)
             app.processEvents()
