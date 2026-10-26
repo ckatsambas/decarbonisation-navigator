@@ -48,7 +48,7 @@ def nice_range(lo: float, hi: float, n: int = 5) -> tuple[float, float, list[flo
     if hi - lo < 1e-12:
         hi = 1.0
     step = nice_step(hi - lo, n)
-    a, b = math.floor(lo / step - 1e-9) * step, math.ceil(hi / step - 1e-9) * step
+    a, b = math.floor(lo / step + 1e-9) * step, math.ceil(hi / step - 1e-9) * step
     if b <= a:
         b = a + step
     ticks = [a + i * step for i in range(int(round((b - a) / step)) + 1)]

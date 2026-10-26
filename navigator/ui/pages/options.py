@@ -29,6 +29,7 @@ from ...engine.mcda import criteria as MC
 from ...i18n import eur_short, num, pct, pick, tr
 from .. import theme
 from ..charts import CashFlowChart
+from ..plans import PlansPanel
 from ..widgets import Panel, ReadMore, TrLabel, label
 from .base import Page
 from .position import Choice
@@ -155,6 +156,9 @@ class StepOptions(Page):
         hv.addWidget(self.detail)
         row.addWidget(holder, 2)
         self.lay.addLayout(row)
+        self.plans = PlansPanel(self)
+        self.plans.changed.connect(lambda: (self._summary(), self.changed.emit()))
+        self.lay.addWidget(self.plans)
         self.lay.addStretch(1)
 
         for c in (self.start, self.life, self.prices, self.rate):
@@ -173,7 +177,7 @@ class StepOptions(Page):
                 "prices": self._value(self.prices, "central"), "rate": float(self._value(self.rate, "0.08"))}
 
     def snapshot(self) -> dict:
-        return {**self.settings(), "shortlist": sorted(self.shortlist)}
+        return {**self.settings(), "shortlist": sorted(self.shortlist), "plans": self.plans.snapshot()}
 
     def restore(self, d: dict | None) -> None:
         d = d or {}
@@ -182,6 +186,7 @@ class StepOptions(Page):
         self.prices.set_value(d.get("prices", "central"))
         self.rate.set_value(f"{d.get('rate', 0.08):.2f}")
         self.shortlist = {k for k in d.get("shortlist", []) if k in self.lib.measures}
+        self.plans.restore(d.get("plans"))
         self.recompute()
 
     # ------------------------------------------------------------------ alternatives for steps 4–5
@@ -194,15 +199,31 @@ class StepOptions(Page):
 
     def alternatives(self) -> list:
         """Shortlisted measures (+ "do nothing") with their criteria values; cached."""
-        if not getattr(self, "model", None) or not self.shortlist:
+        if not getattr(self, "model", None) or not (self.shortlist or self.plans.chosen):
             return []
         sc = self.scenario()
-        key = (repr(sc), repr(self.mcda_settings()), tuple(sorted(self.shortlist)), id(self.model))
+        chosen = tuple(sorted(self.plans.chosen))
+        key = (repr(sc), repr(self.mcda_settings()), tuple(sorted(self.shortlist)), chosen, id(self.model))
         if getattr(self, "_alt_key", None) != key:
             alts = [MC.alternative(self.model, (self.lib[k],), sc, self.mcda_settings(), self.rules, k)
                     for k in sorted(self.shortlist) if any(r.ok and r.m.key == k for r in self.rows)]
+            lib = {m.key: m for m in self.lib}
+            alts += [MC.plan_alternative(self.model, lib, self.plans.chosen[k], sc, self.mcda_settings(), self.rules, k)
+                     for k in chosen]
             self._alts, self._alt_key = [*alts, MC.do_nothing()], key
         return self._alts
+
+    def alt_name(self, key: str) -> str:
+        """Display name of a shortlisted measure or chosen plan."""
+        if key in self.plans.chosen:
+            pl = self.plans.chosen[key]
+            label = self.plans.labels.get(key) or tr("plan.name", l="")
+            return f"{label} ({len(pl.keys)} {tr('plan.measures')})"
+        return pick(self.lib[key].name)
+
+    def install_years(self) -> dict[str, dict[str, int]]:
+        """Installation years of the chosen plans, for the SMAA simulator."""
+        return {k: pl.years for k, pl in self.plans.chosen.items()}
 
     # ------------------------------------------------------------------ compute
     def recompute(self) -> None:
@@ -318,7 +339,8 @@ class StepOptions(Page):
                                      cut=pct(biggest.cut[1]) if biggest else "–"))
         else:
             self.sentence.setText(tr("opt.no_model"))
-        self.shortlist_label.setText(tr("opt.shortlist", n=len(self.shortlist)))
+        self.shortlist_label.setText(tr("opt.shortlist", n=len(self.shortlist))
+                                     + (" " + tr("opt.shortlist.plans", n=len(self.plans.chosen)) if self.plans.chosen else ""))
         clashes = self.lib.clashes(sorted(self.shortlist))
         self.clash_label.setVisible(bool(clashes))
         if clashes:
@@ -388,6 +410,7 @@ class StepOptions(Page):
         self.table.setHorizontalHeaderLabels([tr(k) if k else "" for k in COLS])
         self._fill()
         self._summary()
+        self.plans.on_language()
 
     def on_theme(self) -> None:
         self.chart.restyle()

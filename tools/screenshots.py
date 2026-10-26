@@ -64,6 +64,21 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     opt.table.setCurrentCell(row, 1)
     app.processEvents()
     w.grab().save(str(out / f"step3-{lang}-{pal.name}.png"))
+    # investment plans (run in this thread so the picture is complete)
+    from navigator.engine import optimise as OPT
+    pl = opt.plans
+    lib_all = {m.key: m for m in opt.lib}
+    fr = OPT.pareto(opt.model, lib_all, pl.candidates(), opt.scenario(), pl.settings(), opt.rules)
+    pl.show_front(fr)
+    keys_ad = sorted({k for r in fr.plans for k in r.plan.keys})
+    pl.show_adaptive(OPT.adaptive(opt.model, lib_all, keys_ad, opt.scenario(), pl.settings(), opt.rules))
+    for _ in range(4):
+        app.processEvents()
+    opt.ensureWidgetVisible(pl.futures, 0, 40)
+    app.processEvents()
+    w.grab().save(str(out / f"step3-plans-{lang}-{pal.name}.png"))
+    (out / "views").mkdir(exist_ok=True)
+    pl.grab().save(str(out / "views" / f"step3-plans-{lang}-{pal.name}.png"))
     for key in ("rotor_sails", "hull_coating", "propulsion_devices", "biofuel_blend", "methanol_dual_fuel"):
         i = next((i for i, r in enumerate(opt.rows) if r.m.key == key and r.ok), None)
         if i is not None:

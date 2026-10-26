@@ -32,6 +32,15 @@ reminds the author when an item becomes due. Tick items off with the commit that
 - [ ] Charts, next batch (in this order): the ship against the fleet (scatter), MAC curve, method-agreement
       heatmap.
 
+## Phase 5 (0014)
+- [x] 5a: timed plans, MILP Pareto front with exact re-appraisal, two-stage adaptive plan, plans as MCDA/SMAA
+      alternatives, step-6 PDF + Excel report. The author to review on Windows.
+- [ ] Kept open by the author: a "no-penalty plans only" switch and yearly cut targets (IMO 2030/2040
+      checkpoints) as front constraints.
+- [ ] 5b (if time allows, target January 2027): fleets with FuelEU pooling, banking and borrowing; group
+      decisions (aggregated weights).
+- [ ] After the IMO vote: the two-stage plan's NZF odds come from `markets.json`; set them to the outcome.
+
 ## When Phase 4 (MCDA + SMAA) starts
 - [x] Vectorise the engine with NumPy for tens of thousands of runs (0010: `mcda/smaa.py`, CII not needed).
 - [x] SMAA samples with common random numbers: EU share, every PERT input, prices, EUA path, NZF outcome,

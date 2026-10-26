@@ -27,7 +27,7 @@ from ...engine.mcda import criteria as C
 from ...engine.mcda import ranking as RK
 from ...engine.mcda import smaa as S
 from ...engine.regulation.imo_nzf import SCENARIOS as SCENARIOS_
-from ...i18n import eur_short, num, pct, pick, tr
+from ...i18n import eur_short, num, pct, tr
 from .. import theme
 from ..charts import Switchable
 from ..fan import FanChart
@@ -215,7 +215,7 @@ class StepDecision(Page):
     def name(self, key: str) -> str:
         if key == C.DO_NOTHING:
             return tr("dec.do_nothing")
-        return pick(self.options.lib[key].name)
+        return self.options.alt_name(key)
 
     def recompute(self) -> None:
         self.alts = self.options.alternatives()
@@ -351,7 +351,8 @@ class StepDecision(Page):
             return
         opt = self.options
         alternatives = {a.key: a.measures for a in self.alts if a.key != C.DO_NOTHING}
-        sim = S.Simulator(opt.model, alternatives, opt.scenario(), opt.mcda_settings(), opt.rules)
+        sim = S.Simulator(opt.model, alternatives, opt.scenario(), opt.mcda_settings(), opt.rules,
+                          install=opt.install_years())
         n = int(self._value(self.draws, "10000"))
         kappa = SURE[self._value(self.sure, "mid")]
         odds = ODDS[self._value(self.odds, "equal")]

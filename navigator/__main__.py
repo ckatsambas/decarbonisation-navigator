@@ -6,7 +6,11 @@ import sys
 
 def selftest() -> int:
     """Run the whole engine once without a window (used to check packaged builds): bundled EU MRV
-    data, power model, measure appraisal, BWM weights, the four rankings and a small SMAA run."""
+    data, power model, measure appraisal, BWM weights, the four rankings, a small SMAA run, the plan
+    optimiser and a one-page PDF + Excel report (matplotlib and openpyxl inside the build)."""
+    import tempfile
+    from pathlib import Path
+
     import numpy as np
 
     from .data.mrv import ensure_database
@@ -30,8 +34,21 @@ def selftest() -> int:
     ranks = RK.rank_all(C.matrix(alts), C.global_weights(dict(zip(C.FAMILIES, w, strict=True)), {}), C.MAXIMISE)
     sim = S.Simulator(model, {k: (lib[k],) for k in keys}, sc, st, rules)
     res = S.run(sim, True, None, n=500)
+    from .engine import optimise as O
+    from .report import ReportData, build_pdf, build_xlsx
+    from .report.data import Table
+    libd = {m.key: m for m in lib}
+    front = O.pareto(model, libd, keys, sc, O.Settings(window=4), rules, points=3)
+    rep = ReportData("el", "Έλεγχος", "Kamsarmax", "2026", "test", {}, ["Δοκιμή ελληνικών"], [("a", "b")],
+                     measures=Table("t", ["Μέτρο", "ΚΠΑ"], [[k, a.values["npv"]] for k, a in zip(keys, alts, strict=False)],
+                                    ["text", "eur"]))
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf = build_pdf(rep, Path(tmp) / "r.pdf")
+        xlsx = build_xlsx(rep, Path(tmp) / "r.xlsx")
+        files_ok = pdf.stat().st_size > 1000 and xlsx.stat().st_size > 1000
     ok = (db is not None and np.isfinite(EC.appraise(model, [lib["hull_coating"]], sc, rules=rules).npv)
-          and len(ranks) == 4 and abs(res.acceptability.sum() - len(res.keys)) < 1e-6)
+          and len(ranks) == 4 and abs(res.acceptability.sum() - len(res.keys)) < 1e-6
+          and len(front.plans) >= 1 and files_ok)
     print("selftest", "ok" if ok else "FAILED", "| database:", db)
     return 0 if ok else 1
 

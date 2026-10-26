@@ -8,8 +8,9 @@ from ..data.projects import Project, ProjectStore
 from ..i18n import tr
 from .pages.decision import StepDecision
 from .pages.options import StepOptions
-from .pages.position import StepPosition, StepUpcoming
+from .pages.position import StepPosition
 from .pages.priorities import StepPriorities
+from .pages.report import StepReport
 from .pages.ship import StepShip
 from .state import AppState
 from .stepper import RouteStepper
@@ -50,8 +51,9 @@ class ProjectView(QWidget):
         self.options_step = StepOptions(state, self.position_step)
         self.priorities_step = StepPriorities(state, self.options_step)
         self.decision_step = StepDecision(state, self.options_step, self.priorities_step)
+        self.report_step = StepReport(state, self)
         self.steps = [self.ship_step, self.position_step, self.options_step, self.priorities_step,
-                      self.decision_step, StepUpcoming(state, 6, 5, 3)]
+                      self.decision_step, self.report_step]
         for s in self.steps:
             self.stack.addWidget(s)
         bv.addWidget(self.stack)

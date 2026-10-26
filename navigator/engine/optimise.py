@@ -468,7 +468,7 @@ class Adaptive:
     now: Plan                         # installations up to the decision year: the same in every future
     decide_after: int                 # later installations depend on how the future turns out
     branches: list[Branch]
-    rigid: Plan                       # best plan that is fixed in advance (central future), for comparison
+    rigid: Plan                       # best plan fixed in full today (same constraints), for comparison
 
     @property
     def expected_npv(self) -> float:
@@ -534,42 +534,49 @@ def adaptive(model: ShipModel, lib: Mapping[str, Measure], keys: Sequence[str], 
     lo = np.concatenate([m.base.lb for m in models])
     hi = np.concatenate([m.base.ub for m in models])
     m0 = models[0]
-    first = [s for s, y in enumerate(m0.c.install_years) if y <= decide]
-    rows = []
-    for w in range(1, len(models)):                        # non-anticipativity: first-stage installs agree
-        for i in range(m0.n):
-            for s in first:
-                r = np.zeros(A.shape[1])
-                r[offs[0] + m0.xi(i, s)] = 1
-                r[offs[w] + models[w].xi(i, s)] = -1
-                rows.append(r)
-    cons = [LinearConstraint(A, lo, hi)]
-    if rows:
-        cons.append(LinearConstraint(csr_matrix(np.array(rows)), 0, 0))
     obj = np.concatenate([p * m.npv_row for p, m in zip(probs, models, strict=True)])
-    if min_expected_cut is not None:
-        cut = np.concatenate([p * m.cut_row for p, m in zip(probs, models, strict=True)])
-        cons.append(LinearConstraint(csr_matrix(cut[None, :]), [min_expected_cut], [np.inf]))
+    cut = np.concatenate([p * m.cut_row for p, m in zip(probs, models, strict=True)])
     integ = np.concatenate([m.integrality for m in models])
-    res = milp(-obj, constraints=cons, integrality=integ, bounds=Bounds(np.zeros(A.shape[1]), np.ones(A.shape[1])),
-               options={"time_limit": 30.0, "mip_rel_gap": 1e-3})
+
+    def solve(common_until: int) -> list[Plan]:
+        """Best expected NPV when installations up to `common_until` must be the same in every future."""
+        first = [s for s, y in enumerate(m0.c.install_years) if y <= common_until]
+        n_rows = (len(models) - 1) * m0.n * len(first)
+        NA = lil_matrix((max(n_rows, 1), A.shape[1]))
+        r = 0
+        for w in range(1, len(models)):                    # non-anticipativity
+            for i in range(m0.n):
+                for s in first:
+                    NA[r, offs[0] + m0.xi(i, s)] = 1
+                    NA[r, offs[w] + models[w].xi(i, s)] = -1
+                    r += 1
+        cons = [LinearConstraint(A, lo, hi)]
+        if n_rows:
+            cons.append(LinearConstraint(NA.tocsr(), 0, 0))
+        if min_expected_cut is not None:
+            cons.append(LinearConstraint(csr_matrix(cut[None, :]), [min_expected_cut], [np.inf]))
+        res = milp(-obj, constraints=cons, integrality=integ,
+                   bounds=Bounds(np.zeros(A.shape[1]), np.ones(A.shape[1])),
+                   options={"time_limit": 30.0, "mip_rel_gap": 1e-3})
+        out = []
+        for w, m in enumerate(models):
+            if res.x is None:
+                out.append(Plan(()))
+                continue
+            x = np.round(res.x[offs[w]: offs[w] + m.nx]).reshape(m.n, m.S)
+            out.append(Plan.of((m.c.keys[i], m.c.install_years[s]) for i, s in zip(*np.nonzero(x), strict=True)))
+        return out
+
+    plans = solve(decide)
     if progress:
-        progress(0.85)
-    plans = []
-    for w, m in enumerate(models):
-        if res.x is None:
-            plans.append(Plan(()))
-            continue
-        x = np.round(res.x[offs[w]: offs[w] + m.nx]).reshape(m.n, m.S)
-        plans.append(Plan.of((m.c.keys[i], m.c.install_years[s]) for i, s in zip(*np.nonzero(x), strict=True)))
+        progress(0.8)
+    # the comparison: the best plan fixed in full today, under the same expected-cut requirement
+    rigid = solve(m0.c.install_years[-1])[0]
     now = Plan.of((k, y) for k, y in plans[0].installs if y <= decide) if plans else Plan(())
-    # the rigid comparison: best fixed plan for the central future, kept the same in every future
-    central = next((w for w, f in enumerate(futures) if f[0] == "central"), 0)
-    rigid = models[central].solve("npv") or Plan(())
     branches = []
     for w, (mk, nz, p, _sc) in enumerate(futures):
-        npv, cut = coefs[w].plan_value(plans[w])
-        branches.append(Branch(mk, nz, float(p), plans[w], npv, cut, coefs[w].plan_value(rigid)[0]))
+        npv_w, cut_w = coefs[w].plan_value(plans[w])
+        branches.append(Branch(mk, nz, float(p), plans[w], npv_w, cut_w, coefs[w].plan_value(rigid)[0]))
     if progress:
         progress(1.0)
     return Adaptive(now, decide, branches, rigid)
