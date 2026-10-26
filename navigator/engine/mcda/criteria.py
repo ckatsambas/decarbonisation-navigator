@@ -111,6 +111,34 @@ def alternative(model: ShipModel, measures: Iterable[Measure], scenario: Scenari
     return Alternative(key or "+".join(m.key for m in ms), ms, vals, a)
 
 
+def plan_alternative(model: ShipModel, lib, plan, scenario: Scenario, st: Settings, rules: Rules,
+                     key: str) -> Alternative:
+    """A timed plan (decision 0014) as an MCDA alternative. Its emissions cut is the average yearly cut
+    over the appraisal window, so a later installation counts for less; for a plan that starts
+    everything at once this equals `wtw_cut`."""
+    from ..plan import appraise_plan
+    kw = dict(q=0.5, price_path=st.prices, discount=st.rate, end=st.end, rules=rules, first_year=st.start)
+    ms = tuple(lib[k] for k in plan.keys)
+    a = appraise_plan(model, lib, plan, scenario, **kw)
+    as_drafted = appraise_plan(model, lib, plan, replace(scenario, nzf="as_drafted"), **kw).npv
+    not_adopted = appraise_plan(model, lib, plan, replace(scenario, nzf="not_adopted"), **kw).npv
+    base = EC._wtw_t(model.base.fuel_t, rules.fuels, rules.fueleu.gwp)
+    scale = 1.0
+    if scenario.view == "ww" and model.profile.eu_share is not None:
+        scale = 1 / max(model.profile.eu_share.share, 0.01)
+    cuts = [f.co2e_avoided / (base * scale) for f in a.flows] if base > 0 else [0.0]
+    vals = {
+        "npv": a.npv, "capex": a.capex_eur, "cut": float(np.mean(cuts)),
+        "trl": min(m.attributes.get("trl", 9) for m in ms),
+        "offhire": sum(m.offhire_days.quantile(0.5) for m in ms),
+        "cargo": sum(m.attributes.get("cargo_loss", 0.0) for m in ms),
+        "availability": min(m.attributes.get("availability", 5) for m in ms),
+        "safety": min(m.attributes.get("safety", 5) for m in ms),
+        "nzf_exposure": abs(as_drafted - not_adopted),
+    }
+    return Alternative(key, ms, vals, a, {"plan": plan})
+
+
 def matrix(alts: list[Alternative]) -> np.ndarray:
     return np.array([[a.values[k] for k in KEYS] for a in alts], dtype=float)
 

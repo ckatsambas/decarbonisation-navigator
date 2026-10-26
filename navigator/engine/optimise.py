@@ -446,3 +446,130 @@ def pareto(model: ShipModel, lib: Mapping[str, Measure], keys: Sequence[str], sc
     if progress:
         progress(1.0)
     return Front(keep, c, {"max_gap": max(gaps, default=0.0), "pairs": len(m.pairs), "appraisals": len(cache)})
+
+
+# ------------------------------------------------------------------ two-stage plan (decision 0014-3)
+MARKET_PROB = {"low": 0.25, "central": 0.5, "high": 0.25}
+
+
+@dataclass
+class Branch:
+    market: str                       # low / central / high: fuel prices and EUA path together
+    nzf: str                          # IMO NZF outcome
+    prob: float
+    plan: Plan                        # full plan in this future (shared first stage + its own later steps)
+    npv: float
+    avoided: float
+    rigid_npv: float                  # the best single fixed plan, in this future
+
+
+@dataclass
+class Adaptive:
+    now: Plan                         # installations up to the decision year: the same in every future
+    decide_after: int                 # later installations depend on how the future turns out
+    branches: list[Branch]
+    rigid: Plan                       # best plan that is fixed in advance (central future), for comparison
+
+    @property
+    def expected_npv(self) -> float:
+        return sum(b.prob * b.npv for b in self.branches)
+
+    @property
+    def expected_rigid(self) -> float:
+        return sum(b.prob * b.rigid_npv for b in self.branches)
+
+    @property
+    def value_of_flexibility(self) -> float:
+        """Expected NPV gained by deciding later steps once the future is known (≥ 0 up to search error)."""
+        return self.expected_npv - self.expected_rigid
+
+
+def scenario_set(base: Scenario, rules: Rules, nzf_prob: Mapping[str, float] | None = None,
+                 market_prob: Mapping[str, float] | None = None) -> list[tuple[str, str, float, Scenario]]:
+    """Nine futures: fuel and carbon market (low / central / high) × IMO NZF outcome."""
+    from dataclasses import replace
+
+    from .models import YearSeries
+    nzf_prob = dict(nzf_prob or rules.markets.nzf_probability)
+    tot = sum(nzf_prob.values()) or 1.0
+    market_prob = dict(market_prob or MARKET_PROB)
+    out = []
+    for mk, pm in market_prob.items():
+        for nz, pn in nzf_prob.items():
+            if pn <= 0 or pm <= 0:
+                continue
+            sc = replace(base, eua=YearSeries(rules.markets.eua_paths[mk]), nzf=nz)
+            out.append((mk, nz, pm * pn / tot, sc))
+    return out
+
+
+def adaptive(model: ShipModel, lib: Mapping[str, Measure], keys: Sequence[str], base: Scenario,
+             st: Settings | None = None, rules: Rules | None = None, prices: Prices | None = None,
+             decide_after: int | None = None, min_expected_cut: float | None = None,
+             nzf_prob: Mapping[str, float] | None = None,
+             progress: Callable[[float], None] | None = None) -> Adaptive:
+    """Two-stage stochastic MILP: what to install now (common to all futures) and what to add later in
+    each future, for the highest expected NPV (optionally with an expected emissions cut)."""
+    from scipy.sparse import block_diag, csr_matrix
+    st = st or Settings()
+    rules = rules or Rules.load()
+    prices = prices or default_prices()
+    decide = decide_after if decide_after is not None else st.start + 1
+    phys = SetPhysics(model, lib, st.q, rules)
+    clashes = [(a, b) for i, a in enumerate(keys) for b in keys[i + 1:]
+               if b in lib[a].excludes or a in lib[b].excludes]
+    futures = scenario_set(base, rules, nzf_prob)
+    coefs, models = [], []
+    for k, (mk, _nz, _p, sc) in enumerate(futures):
+        stw = Settings(st.start, st.window, mk, st.discount, st.q, st.budget_eur, st.end)
+        c = coefficients(model, lib, keys, sc, stw, rules, prices, clashes, None, phys)
+        coefs.append(c)
+        models.append(Model(c, st.budget_eur))
+        if progress:
+            progress(0.6 * (k + 1) / len(futures))
+    probs = np.array([f[2] for f in futures])
+    sizes = [m.nv for m in models]
+    offs = np.r_[0, np.cumsum(sizes)[:-1]]
+    A = block_diag([m.base.A for m in models], format="csr")
+    lo = np.concatenate([m.base.lb for m in models])
+    hi = np.concatenate([m.base.ub for m in models])
+    m0 = models[0]
+    first = [s for s, y in enumerate(m0.c.install_years) if y <= decide]
+    rows = []
+    for w in range(1, len(models)):                        # non-anticipativity: first-stage installs agree
+        for i in range(m0.n):
+            for s in first:
+                r = np.zeros(A.shape[1])
+                r[offs[0] + m0.xi(i, s)] = 1
+                r[offs[w] + models[w].xi(i, s)] = -1
+                rows.append(r)
+    cons = [LinearConstraint(A, lo, hi)]
+    if rows:
+        cons.append(LinearConstraint(csr_matrix(np.array(rows)), 0, 0))
+    obj = np.concatenate([p * m.npv_row for p, m in zip(probs, models, strict=True)])
+    if min_expected_cut is not None:
+        cut = np.concatenate([p * m.cut_row for p, m in zip(probs, models, strict=True)])
+        cons.append(LinearConstraint(csr_matrix(cut[None, :]), [min_expected_cut], [np.inf]))
+    integ = np.concatenate([m.integrality for m in models])
+    res = milp(-obj, constraints=cons, integrality=integ, bounds=Bounds(np.zeros(A.shape[1]), np.ones(A.shape[1])),
+               options={"time_limit": 30.0, "mip_rel_gap": 1e-3})
+    if progress:
+        progress(0.85)
+    plans = []
+    for w, m in enumerate(models):
+        if res.x is None:
+            plans.append(Plan(()))
+            continue
+        x = np.round(res.x[offs[w]: offs[w] + m.nx]).reshape(m.n, m.S)
+        plans.append(Plan.of((m.c.keys[i], m.c.install_years[s]) for i, s in zip(*np.nonzero(x), strict=True)))
+    now = Plan.of((k, y) for k, y in plans[0].installs if y <= decide) if plans else Plan(())
+    # the rigid comparison: best fixed plan for the central future, kept the same in every future
+    central = next((w for w, f in enumerate(futures) if f[0] == "central"), 0)
+    rigid = models[central].solve("npv") or Plan(())
+    branches = []
+    for w, (mk, nz, p, _sc) in enumerate(futures):
+        npv, cut = coefs[w].plan_value(plans[w])
+        branches.append(Branch(mk, nz, float(p), plans[w], npv, cut, coefs[w].plan_value(rigid)[0]))
+    if progress:
+        progress(1.0)
+    return Adaptive(now, decide, branches, rigid)
