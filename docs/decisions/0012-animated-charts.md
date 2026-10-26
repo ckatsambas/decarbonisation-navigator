@@ -31,7 +31,7 @@ and a ship's radar screen; and to try a turnable 3D view. Accuracy comes first.
    | 5 | Option profiles (new) | one radar per option (small multiples) · all options on one radar |
    | 5 | Robustness to priorities | ship's radar of weights · priority map of two families · turnable 3D surface |
    | 5 | Fan of futures (new) | cumulative discounted cash flow of 400 SMAA futures for a chosen option, NPV distribution, shares |
-   | 5 | Chance of each rank | donut of first-rank shares · bubble matrix of rank acceptability |
+   | 5 | Chance of each rank | bubble matrix of rank acceptability (the donut was removed at the author's request, 26 Oct) |
 
 4. **Accuracy rules.**
    - Profile radars use the same min–max normalisation as SAW, and the hover gives the actual values. The text says that a

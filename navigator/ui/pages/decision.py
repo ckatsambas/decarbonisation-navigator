@@ -30,7 +30,6 @@ from ...engine.regulation.imo_nzf import SCENARIOS as SCENARIOS_
 from ...i18n import eur_short, num, pct, pick, tr
 from .. import theme
 from ..charts import Switchable
-from ..donut import Donut3D
 from ..fan import FanChart
 from ..maps import FAMILY_COLORS, PriorityMap, RankBubbles, option_colors
 from ..radar import ProfileRadar, WeightRadar
@@ -180,10 +179,8 @@ class StepDecision(Page):
         sb.addWidget(self.fan)
         sb.addWidget(ReadMore("dec.fan.more"))
         sb.addWidget(TrLabel("dec.acc", "SectionTitle"))
-        self.donut = Donut3D()
         self.acc_chart = RankBubbles()
-        self.acc_views = Switchable([("◔", tr("view.donut"), self.donut), ("⁘", tr("view.bubbles"), self.acc_chart)])
-        sb.addWidget(self.acc_views)
+        sb.addWidget(self.acc_chart)
         sb.addWidget(ReadMore("dec.acc.more"))
         self.smaa_box.hide()
         up.body.addWidget(self.smaa_box)
@@ -399,8 +396,6 @@ class StepDecision(Page):
         self.acc_chart.set_data(names, res.acceptability[order], [exp[i] for i in order], best_row, ref,
                                 (tr("dec.rank.short"), tr("dec.exp_rank"), tr("dec.recommended"), tr("dec.reference")),
                                 cols)
-        self.donut.set_data([(names[r], res.acceptability[i, 0], cols[r], "") for r, i in enumerate(order)
-                             if res.acceptability[i, 0] > 0], tr("dec.donut.caption", n=num(res.n)))
         self.smaa_box.show()
         current = self.fan_pick.currentData()
         self.fan_pick.blockSignals(True)
@@ -488,7 +483,6 @@ class StepDecision(Page):
             c.retranslate()
         self.profiles.set_tips([tr("view.grid"), tr("view.overlay")])
         self.views.set_tips([tr("view.radar"), tr("view.map"), tr("view.3d")])
-        self.acc_views.set_tips([tr("view.donut"), tr("view.bubbles")])
         self._view_changed(self.views.index())
         self.retranslate_buttons()
         self.recompute()
