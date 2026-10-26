@@ -451,5 +451,6 @@
   "dec.exp_rank": "Expected rank",
   "dec.conf": "Confidence",
   "dec.central": "What must matter for it to win",
-  "dec.smaa.more": "SMAA-2 (Lahdelma & Salminen 2001). “Rank 1”: rank acceptability index b¹. “Expected rank”: average rank. “Confidence”: how often it wins when only the data vary, with its central weights. The last column shows the two heaviest criteria in the futures where the option wins."
+  "dec.smaa.more": "SMAA-2 (Lahdelma & Salminen 2001). “Rank 1”: rank acceptability index b¹. “Expected rank”: average rank. “Confidence”: how often it wins when only the data vary, with its central weights. The last column shows the two heaviest criteria in the futures where the option wins.",
+  "pri.reset": "Reset this section's answers"
 }

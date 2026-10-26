@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -152,6 +153,14 @@ class BwmBlock(QWidget):
             self.q_bo[k].setText(tr("pri.q.bo", best=item_name(b), other=item_name(k)))
             self.q_ow[k].setText(tr("pri.q.ow", worst=item_name(w), other=item_name(k)))
 
+    def reset(self) -> None:
+        """Back to the starting point: first item most, last least important, every comparison at 2."""
+        self._fill_boxes(self.items[0], self.items[-1])
+        for sc in (*self.bo.values(), *self.ow.values()):
+            sc.set_value(2)
+        self._layout()
+        self.changed.emit()
+
     def result(self) -> W.WeightResult:
         b, w = self.best.currentData(), self.worst.currentData()
         bi, wi = self.items.index(b), self.items.index(w)
@@ -209,6 +218,12 @@ class AhpBlock(QWidget):
         g.setColumnStretch(1, 1)
         self.retranslate()
 
+    def reset(self) -> None:
+        """Every pair back to equal importance."""
+        for sc in self.pairs.values():
+            sc.set_value(0)
+        self.changed.emit()
+
     def result(self) -> W.WeightResult:
         j = {}
         for (i, k), s in self.pairs.items():
@@ -238,8 +253,16 @@ class Level(Panel):
     def __init__(self, key: str, items: list[str]):
         super().__init__(f"pri.level.{key}")
         self.key, self.items = key, items
+        top = QHBoxLayout()
         self.hint = label("", "Faint", wrap=True)
-        self.body.addWidget(self.hint)
+        top.addWidget(self.hint, 1)
+        self.reset_btn = QToolButton()
+        self.reset_btn.setObjectName("Reset")
+        self.reset_btn.setText("\u21BA")
+        self.reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.reset_btn.clicked.connect(self.reset)
+        top.addWidget(self.reset_btn, 0, Qt.AlignmentFlag.AlignTop)
+        self.body.addLayout(top)
         self.bwm, self.ahp = BwmBlock(items), AhpBlock(items)
         self.body.addWidget(self.bwm)
         self.body.addWidget(self.ahp)
@@ -249,6 +272,14 @@ class Level(Panel):
         self.ahp.changed.connect(self.changed)
         self.method = "bwm"
         self.set_method("bwm")
+        self.retranslate_reset()
+
+    def reset(self) -> None:
+        """Reset this section's answers (only the method shown)."""
+        (self.bwm if self.method == "bwm" else self.ahp).reset()
+
+    def retranslate_reset(self) -> None:
+        self.reset_btn.setToolTip(tr("pri.reset"))
 
     def set_method(self, method: str) -> None:
         self.method = method
@@ -403,6 +434,7 @@ class StepPriorities(Page):
         for lv in self.levels.values():
             lv.bwm.retranslate()
             lv.ahp.retranslate()
+            lv.retranslate_reset()
         self.update_hints()
         self.update_weights()
 
