@@ -209,8 +209,8 @@ def test_priorities_and_decision_with_smaa(win, qtbot):
     pri = pv.priorities_step
     assert len(opt.alternatives()) == 4                        # three measures + do nothing
     fam = pri.levels["families"]
-    fam.bwm.best.setCurrentIndex(0)                            # money most important
-    fam.bwm.worst.setCurrentIndex(4)                           # regulation least
+    fam.bwm.set_best("money")                                  # money most important
+    fam.bwm.set_worst("regulation")                            # regulation least
     assert pri.global_weights().sum() == pytest.approx(1)
     assert pri.results["families"].acceptable
     pri._method("ahp")
@@ -228,7 +228,7 @@ def test_priorities_and_decision_with_smaa(win, qtbot):
     win.show_lobby()
     win.open_project(pid)
     pri = win.project_view.priorities_step
-    assert pri.levels["families"].bwm.best.currentData() == "money"
+    assert pri.levels["families"].bwm.best_key == "money"
 
 
 def test_priorities_reset_buttons(win):
@@ -237,14 +237,14 @@ def test_priorities_reset_buttons(win):
     pri = pv.priorities_step
     fam = pri.levels["families"]
     start = pri.global_weights().copy()
-    fam.bwm.best.setCurrentIndex(3)
-    fam.bwm.bo["money"].slider.setValue(8)
+    fam.bwm.stars["operations"].click()
+    fam.bwm.bo["money"].set_value(8, emit=True)
     assert not np.allclose(pri.global_weights(), start)
     fam.reset_btn.click()
-    assert fam.bwm.best.currentData() == "money" and fam.bwm.bo["climate"].value() == 2
+    assert fam.bwm.best_key == "money" and fam.bwm.bo["climate"].value() == 2
     assert pri.global_weights() == pytest.approx(start)
     pri._method("ahp")
     money = pri.levels["money"]
-    next(iter(money.ahp.pairs.values())).slider.setValue(-6)
+    next(iter(money.ahp.pairs.values())).set_value(-6, emit=True)
     money.reset_btn.click()
     assert all(s.value() == 0 for s in money.ahp.pairs.values())

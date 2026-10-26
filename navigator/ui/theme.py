@@ -162,6 +162,12 @@ QToolButton#Fold:hover, QToolButton#Fold:checked {{ color: {p.accent}; }}
 #Warn {{ color: {p.bad}; font-size: 9.5pt; }}
 QToolButton#Reset {{ font-size: 15pt; color: {p.muted}; background: transparent; border: 1px solid {p.border};
     border-radius: 14px; min-width: 26px; min-height: 26px; padding: 0 0 2px 0; }}
+QToolButton#Star, QToolButton#Cross {{ color: {p.faint}; background: transparent; border: 1px solid transparent;
+    border-radius: 4px; min-width: 22px; min-height: 22px; font-size: 11pt; }}
+QToolButton#Star:hover, QToolButton#Cross:hover {{ border-color: {p.border}; }}
+QToolButton#Star:checked {{ color: #D9A441; border-color: #D9A441; background: {p.panel_alt}; }}
+QToolButton#Cross:checked {{ color: {p.bad}; border-color: {p.bad}; background: {p.panel_alt}; }}
+#JudgeName {{ font-size: 9.5pt; }}
 QToolButton#ViewChip {{ color: {p.faint}; background: {p.panel}; border: 1px solid {p.border}; border-radius: 4px;
     min-width: 22px; min-height: 20px; padding: 0 3px; font-size: 10pt; }}
 QToolButton#ViewChip:hover {{ color: {p.accent}; border-color: {p.accent}; }}

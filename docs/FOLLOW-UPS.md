@@ -27,6 +27,8 @@ reminds the author when an item becomes due. Tick items off with the commit that
 - [x] Charts, second batch (0012): every chart morphs on each change (FA style); fan of futures, option
       profile radars, ship's radar of weights, exact priority map, turnable 3D surface, donuts; two views
       where two fit, switched by small chips. The author to review on Windows.
+- [x] Step 4 inputs (0013): BWM by clicks on 1–9 scales with ★/✕, AHP as a clickable comparison matrix
+      with inconsistency outlines, ranges as tooltips; step-5 donut removed. The author to review.
 - [ ] Charts, next batch (in this order): the ship against the fleet (scatter), MAC curve, method-agreement
       heatmap.
 

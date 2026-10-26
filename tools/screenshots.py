@@ -71,14 +71,24 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     pv.next_btn.click()
     pri = pv.priorities_step
     fam = pri.levels["families"].bwm
-    fam.best.setCurrentIndex(0)
-    fam.worst.setCurrentIndex(4)
+    fam.set_best("money")
+    fam.set_worst("regulation")
     for k, v in {"climate": 2, "technology": 4, "operations": 3, "regulation": 7}.items():
-        fam.bo[k].slider.setValue(v)
+        fam.bo[k].set_value(v, emit=True)
     for k, v in {"money": 7, "climate": 5, "technology": 2, "operations": 3}.items():
-        fam.ow[k].slider.setValue(v)
+        fam.ow[k].set_value(v, emit=True)
     app.processEvents()
     w.grab().save(str(out / f"step4-{lang}-{pal.name}.png"))
+    (out / "views").mkdir(exist_ok=True)
+    pri.levels["families"].grab().save(str(out / "views" / f"step4-bwm-{lang}-{pal.name}.png"))
+    pri._method("ahp")
+    money_pair = next(iter(pri.levels["families"].ahp.pairs.values()))
+    money_pair.set_value(-4, emit=True)
+    app.processEvents()
+    pri.levels["families"].grab().save(str(out / "views" / f"step4-ahp-{lang}-{pal.name}.png"))
+    money_pair.set_value(0, emit=True)
+    pri._method("bwm")
+    app.processEvents()
     pv.next_btn.click()
     dec = pv.decision_step
     from navigator.engine.mcda import criteria as MC
