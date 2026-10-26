@@ -10,11 +10,9 @@ from __future__ import annotations
 import numpy as np
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
-    QSlider,
     QTableWidget,
     QTableWidgetItem,
     QToolButton,
@@ -27,6 +25,7 @@ from ...engine.mcda import weights as W
 from ...i18n import eur_short, num, pct, tr
 from .. import theme
 from ..charts import HBarChart, Switchable
+from ..judgement import ClickScale, PairMatrix, WeightBar, ratio
 from ..maps import FAMILY_COLORS, RED
 from ..radar import ProfileRadar
 from ..widgets import Panel, ReadMore, TrLabel, label
@@ -41,143 +40,123 @@ def item_name(key: str) -> str:
     return tr(f"fam.{key}") if key in C.FAMILIES else tr(f"crit.{key}")
 
 
-class Scale(QWidget):
-    """A 1–9 judgement slider with its verbal meaning."""
-
-    changed = Signal()
-
-    def __init__(self, lo: int = 1, hi: int = 9, value: int = 1, two_sided: bool = False):
-        super().__init__()
-        self.two_sided = two_sided
-        h = QHBoxLayout(self)
-        h.setContentsMargins(0, 0, 0, 0)
-        self.slider = QSlider(Qt.Orientation.Horizontal)
-        self.slider.setRange(lo, hi)
-        self.slider.setValue(value)
-        self.slider.setPageStep(1)
-        self.slider.setMinimumWidth(180)
-        self.text = label("", "Muted")
-        self.text.setMinimumWidth(215)
-        h.addWidget(self.slider, 1)
-        h.addWidget(self.text)
-        self.slider.valueChanged.connect(self._moved)
-        self._moved()
-
-    def _moved(self) -> None:
-        self.retranslate()
-        self.changed.emit()
-
-    def value(self) -> int:
-        return self.slider.value()
-
-    def set_value(self, v: int) -> None:
-        self.slider.blockSignals(True)
-        self.slider.setValue(int(v))
-        self.slider.blockSignals(False)
-        self.retranslate()
-
-    def intensity(self) -> int:
-        v = self.slider.value()
-        return abs(v) + 1 if self.two_sided else v
-
-    def retranslate(self) -> None:
-        n = self.intensity()
-        self.text.setText(f"{n} · {tr(f'scale.{n}')}")
-
-
 class BwmBlock(QWidget):
+    """BWM as a small table: ★ marks the most important item, ✕ the least; each other item gets two
+    clicked judgements (how much less than ★, how much more than ✕) and shows its resulting weight."""
+
     changed = Signal()
 
     def __init__(self, items: list[str]):
         super().__init__()
         self.items = items
-        v = QVBoxLayout(self)
-        v.setContentsMargins(0, 0, 0, 0)
-        top = QHBoxLayout()
-        self.best_label, self.worst_label = TrLabel("pri.best", "Faint"), TrLabel("pri.worst", "Faint")
-        self.best, self.worst = QComboBox(), QComboBox()
-        top.addWidget(self.best_label)
-        top.addWidget(self.best)
-        top.addSpacing(24)
-        top.addWidget(self.worst_label)
-        top.addWidget(self.worst)
-        top.addStretch(1)
-        v.addLayout(top)
-        self.grid = QGridLayout()
-        self.grid.setHorizontalSpacing(12)
-        v.addLayout(self.grid)
-        self.bo: dict[str, Scale] = {}
-        self.ow: dict[str, Scale] = {}
-        self.q_bo: dict[str, object] = {}
-        self.q_ow: dict[str, object] = {}
-        for i, k in enumerate(items):
-            self.q_bo[k] = label("", "Muted", wrap=True)
-            self.q_ow[k] = label("", "Muted", wrap=True)
-            self.bo[k], self.ow[k] = Scale(value=2), Scale(value=2)
-            self.grid.addWidget(self.q_bo[k], 2 * i, 0)
-            self.grid.addWidget(self.bo[k], 2 * i, 1)
-            self.grid.addWidget(self.q_ow[k], 2 * i + 1, 0)
-            self.grid.addWidget(self.ow[k], 2 * i + 1, 1)
-            self.bo[k].changed.connect(self.changed)
-            self.ow[k].changed.connect(self.changed)
-        self.grid.setColumnStretch(0, 1)
-        self.grid.setColumnStretch(1, 1)
-        self._fill_boxes(items[0], items[-1])
-        self.best.currentIndexChanged.connect(self._picked)
-        self.worst.currentIndexChanged.connect(self._picked)
-        self._layout()
+        self.best_key, self.worst_key = items[0], items[-1]
+        g = QGridLayout(self)
+        g.setContentsMargins(0, 0, 0, 0)
+        g.setHorizontalSpacing(10)
+        g.setVerticalSpacing(5)
+        self.head_bo = label("", "Faint", wrap=True)
+        self.head_ow = label("", "Faint", wrap=True)
+        self.head_w = TrLabel("pri.col.weight", "Faint")
+        star_h, cross_h = label("★", "Faint"), label("✕", "Faint")
+        self.star_h, self.cross_h = star_h, cross_h
+        g.addWidget(star_h, 0, 1, Qt.AlignmentFlag.AlignCenter)
+        g.addWidget(cross_h, 0, 2, Qt.AlignmentFlag.AlignCenter)
+        g.addWidget(self.head_bo, 0, 3)
+        g.addWidget(self.head_ow, 0, 4)
+        g.addWidget(self.head_w, 0, 5)
+        self.names: dict[str, object] = {}
+        self.stars: dict[str, QToolButton] = {}
+        self.crosses: dict[str, QToolButton] = {}
+        self.bo: dict[str, ClickScale] = {}
+        self.ow: dict[str, ClickScale] = {}
+        self.bars: dict[str, WeightBar] = {}
+        for r, k in enumerate(items, start=1):
+            self.names[k] = label("", "JudgeName")
+            self.stars[k] = self._mark("★", "Star", lambda _=False, k=k: self.set_best(k))
+            self.crosses[k] = self._mark("✕", "Cross", lambda _=False, k=k: self.set_worst(k))
+            self.bo[k], self.ow[k], self.bars[k] = ClickScale(2), ClickScale(2), WeightBar()
+            self.bo[k].changed.connect(self._judged)
+            self.ow[k].changed.connect(self._judged)
+            for c, w in enumerate((self.names[k], self.stars[k], self.crosses[k], self.bo[k], self.ow[k], self.bars[k])):
+                g.addWidget(w, r, c)
+        g.setColumnStretch(3, 1)
+        g.setColumnStretch(4, 1)
+        self.retranslate()
 
-    def _fill_boxes(self, best: str, worst: str) -> None:
-        for box, sel in ((self.best, best), (self.worst, worst)):
-            box.blockSignals(True)
-            box.clear()
-            for k in self.items:
-                box.addItem(item_name(k), k)
-            box.setCurrentIndex(self.items.index(sel))
-            box.blockSignals(False)
+    @staticmethod
+    def _mark(text: str, name: str, slot) -> QToolButton:
+        b = QToolButton()
+        b.setObjectName(name)
+        b.setText(text)
+        b.setCheckable(True)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.clicked.connect(slot)
+        return b
 
-    def _picked(self) -> None:
-        if self.best.currentData() == self.worst.currentData():
-            other = next(k for k in self.items if k != self.best.currentData())
-            self.worst.blockSignals(True)
-            self.worst.setCurrentIndex(self.items.index(other))
-            self.worst.blockSignals(False)
+    def _judged(self) -> None:
         self._layout()
         self.changed.emit()
 
+    def set_best(self, k: str, emit: bool = True) -> None:
+        if k == self.worst_key:
+            self.worst_key = self.best_key
+        self.best_key = k
+        self._layout()
+        if emit:
+            self.changed.emit()
+
+    def set_worst(self, k: str, emit: bool = True) -> None:
+        if k == self.best_key:
+            self.best_key = self.worst_key
+        self.worst_key = k
+        self._layout()
+        if emit:
+            self.changed.emit()
+
     def _layout(self) -> None:
-        b, w = self.best.currentData(), self.worst.currentData()
+        b, w = self.best_key, self.worst_key
         for k in self.items:
-            self.q_bo[k].setVisible(k != b)
-            self.bo[k].setVisible(k != b)
-            self.q_ow[k].setVisible(k not in (w, b))
-            self.ow[k].setVisible(k not in (w, b))
-            self.q_bo[k].setText(tr("pri.q.bo", best=item_name(b), other=item_name(k)))
-            self.q_ow[k].setText(tr("pri.q.ow", worst=item_name(w), other=item_name(k)))
+            self.stars[k].setChecked(k == b)
+            self.crosses[k].setChecked(k == w)
+            self.bo[k].set_fixed(k == b)
+            self.ow[k].set_fixed(k in (b, w), self.bo[w].value() if k == b else None)
+        self.head_bo.setText(tr("pri.col.vs_best", best=item_name(b)))
+        self.head_ow.setText(tr("pri.col.vs_worst", worst=item_name(w)))
+
+    def set_weights(self, weights) -> None:
+        top = int(np.argmax(weights))
+        for i, k in enumerate(self.items):
+            self.bars[k].set_value(float(weights[i]), i == top)
+
+    def set_tips(self, tips: dict[str, str]) -> None:
+        for k in self.items:
+            self.names[k].setToolTip(tips.get(k, ""))
 
     def reset(self) -> None:
         """Back to the starting point: first item most, last least important, every comparison at 2."""
-        self._fill_boxes(self.items[0], self.items[-1])
+        self.best_key, self.worst_key = self.items[0], self.items[-1]
         for sc in (*self.bo.values(), *self.ow.values()):
             sc.set_value(2)
         self._layout()
         self.changed.emit()
 
     def result(self) -> W.WeightResult:
-        b, w = self.best.currentData(), self.worst.currentData()
+        b, w = self.best_key, self.worst_key
         bi, wi = self.items.index(b), self.items.index(w)
         a_b = [1.0 if k == b else float(self.bo[k].value()) for k in self.items]
         a_w = [1.0 if k == w else (a_b[wi] if k == b else float(self.ow[k].value())) for k in self.items]
         return W.bwm(bi, wi, a_b, a_w)
 
     def snapshot(self) -> dict:
-        return {"best": self.best.currentData(), "worst": self.worst.currentData(),
+        return {"best": self.best_key, "worst": self.worst_key,
                 "bo": {k: s.value() for k, s in self.bo.items()}, "ow": {k: s.value() for k, s in self.ow.items()}}
 
     def restore(self, d: dict) -> None:
         if not d:
             return
-        self._fill_boxes(d.get("best", self.items[0]), d.get("worst", self.items[-1]))
+        best, worst = d.get("best", self.items[0]), d.get("worst", self.items[-1])
+        self.best_key = best if best in self.items else self.items[0]
+        self.worst_key = worst if worst in self.items and worst != self.best_key else self.items[-1]
         for k, v in d.get("bo", {}).items():
             if k in self.bo:
                 self.bo[k].set_value(v)
@@ -187,66 +166,76 @@ class BwmBlock(QWidget):
         self._layout()
 
     def retranslate(self) -> None:
-        self._fill_boxes(self.best.currentData(), self.worst.currentData())
-        for s in (*self.bo.values(), *self.ow.values()):
-            s.retranslate()
+        for k in self.items:
+            self.names[k].setText(item_name(k))
+            self.stars[k].setToolTip(tr("pri.best"))
+            self.crosses[k].setToolTip(tr("pri.worst"))
+        self.star_h.setToolTip(tr("pri.best"))
+        self.cross_h.setToolTip(tr("pri.worst"))
+        self.head_w.retranslate()
         self._layout()
 
 
+class Pair:
+    """One AHP answer (value −8…8; negative = the first item matters more) inside a PairMatrix."""
+
+    def __init__(self, matrix: PairMatrix, key: tuple[int, int]):
+        self.matrix, self.key = matrix, key
+
+    def value(self) -> int:
+        return self.matrix.values[self.key]
+
+    def set_value(self, v: int, emit: bool = False) -> None:
+        self.matrix.set_value(self.key, v, emit=emit)
+
+
 class AhpBlock(QWidget):
-    """Every pair once: slider left = first item more important, right = second."""
+    """Every pair once, in the comparison matrix; click a cell to answer."""
 
     changed = Signal()
 
     def __init__(self, items: list[str]):
         super().__init__()
         self.items = items
-        g = QGridLayout(self)
-        g.setContentsMargins(0, 0, 0, 0)
-        self.pairs: dict[tuple[int, int], Scale] = {}
-        self.names: dict[tuple[int, int], tuple] = {}
-        r = 0
-        for i in range(len(items)):
-            for j in range(i + 1, len(items)):
-                a, b = label("", "Muted"), label("", "Muted")
-                s = Scale(-8, 8, 0, two_sided=True)
-                g.addWidget(a, r, 0, Qt.AlignmentFlag.AlignRight)
-                g.addWidget(s, r, 1)
-                g.addWidget(b, r, 2)
-                self.pairs[(i, j)] = s
-                self.names[(i, j)] = (a, b)
-                s.changed.connect(self.changed)
-                r += 1
-        g.setColumnStretch(1, 1)
-        self.retranslate()
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        self.matrix = PairMatrix(items, item_name)
+        self.matrix.changed.connect(self.changed)
+        v.addWidget(self.matrix)
+        self.how = TrLabel("pri.ahp.how", "Faint", wrap=True)
+        v.addWidget(self.how)
+        self.pairs = {key: Pair(self.matrix, key) for key in self.matrix.values}
 
     def reset(self) -> None:
         """Every pair back to equal importance."""
-        for sc in self.pairs.values():
-            sc.set_value(0)
+        for key in self.matrix.values:
+            self.matrix.values[key] = 0
+        self.matrix.update()
         self.changed.emit()
 
     def result(self) -> W.WeightResult:
-        j = {}
-        for (i, k), s in self.pairs.items():
-            v = s.value()                   # left (negative) = first item more important
-            j[(i, k)] = (1 - v) if v < 0 else 1 / (1 + v)
+        j = {key: ratio(v) for key, v in self.matrix.values.items()}
         return W.ahp(W.ahp_matrix(len(self.items), j))
 
+    def set_weights(self, weights) -> None:
+        self.matrix.set_weights(weights)
+
+    def set_tips(self, tips: dict[str, str]) -> None:
+        self.matrix.tips = dict(tips)
+
     def snapshot(self) -> dict:
-        return {f"{i}-{k}": s.value() for (i, k), s in self.pairs.items()}
+        return {f"{i}-{k}": v for (i, k), v in self.matrix.values.items()}
 
     def restore(self, d: dict) -> None:
         for key, v in (d or {}).items():
             i, k = (int(x) for x in key.split("-"))
-            if (i, k) in self.pairs:
-                self.pairs[(i, k)].set_value(v)
+            if (i, k) in self.matrix.values:
+                self.matrix.values[(i, k)] = int(v)
+        self.matrix.update()
 
     def retranslate(self) -> None:
-        for (i, k), (a, b) in self.names.items():
-            a.setText(item_name(self.items[i]))
-            b.setText(item_name(self.items[k]))
-            self.pairs[(i, k)].retranslate()
+        self.how.retranslate()
+        self.matrix.update()
 
 
 class Level(Panel):
@@ -255,16 +244,14 @@ class Level(Panel):
     def __init__(self, key: str, items: list[str]):
         super().__init__(f"pri.level.{key}")
         self.key, self.items = key, items
-        top = QHBoxLayout()
-        self.hint = label("", "Faint", wrap=True)
-        top.addWidget(self.hint, 1)
-        self.reset_btn = QToolButton()
+        self.hint = label("", "Faint", wrap=True)          # only when there is nothing to compare yet
+        self.hint.hide()
+        self.body.addWidget(self.hint)
+        self.reset_btn = QToolButton(self)                  # floats in the panel's top-right corner
         self.reset_btn.setObjectName("Reset")
-        self.reset_btn.setText("\u21BA")
+        self.reset_btn.setText("↺")
         self.reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.reset_btn.clicked.connect(self.reset)
-        top.addWidget(self.reset_btn, 0, Qt.AlignmentFlag.AlignTop)
-        self.body.addLayout(top)
         self.bwm, self.ahp = BwmBlock(items), AhpBlock(items)
         self.body.addWidget(self.bwm)
         self.body.addWidget(self.ahp)
@@ -275,6 +262,12 @@ class Level(Panel):
         self.method = "bwm"
         self.set_method("bwm")
         self.retranslate_reset()
+
+    def resizeEvent(self, e) -> None:  # noqa: N802 - Qt API
+        super().resizeEvent(e)
+        self.reset_btn.adjustSize()
+        self.reset_btn.move(self.width() - self.reset_btn.width() - 12, 8)
+        self.reset_btn.raise_()
 
     def reset(self) -> None:
         """Reset this section's answers (only the method shown)."""
@@ -288,10 +281,15 @@ class Level(Panel):
         self.bwm.setVisible(method == "bwm")
         self.ahp.setVisible(method == "ahp")
 
+    def set_tips(self, tips: dict[str, str]) -> None:
+        self.bwm.set_tips(tips)
+        self.ahp.set_tips(tips)
+
     def result(self) -> W.WeightResult:
         return self.bwm.result() if self.method == "bwm" else self.ahp.result()
 
     def show_status(self, r: W.WeightResult) -> None:
+        (self.bwm if self.method == "bwm" else self.ahp).set_weights(r.weights)
         key = "pri.cons.ok" if r.acceptable else "pri.cons.bad"
         self.status.setText(tr(key, cr=num(r.consistency, 2), limit=num(r.threshold, 2)))
         self.status.setObjectName("Muted" if r.acceptable else "Warn")
@@ -365,30 +363,29 @@ class StepPriorities(Page):
         self.update_weights()
 
     def update_hints(self) -> None:
+        """The spread of the shortlist on each item, shown as a tooltip on its name (swing weighting)."""
         alts = self.options.alternatives()
-        if len(alts) < 2:
+        empty = len(alts) < 2
+        for lv in self.levels.values():
+            lv.hint.setText(tr("pri.need_shortlist") if empty else "")
+            lv.hint.setVisible(empty)
+        if empty:
             for lv in self.levels.values():
-                lv.hint.setText(tr("pri.need_shortlist"))
+                lv.set_tips({})
             return
         x = {k: [a.values[k] for a in alts] for k in C.KEYS}
+        fmt = {"npv": eur_short, "capex": eur_short, "cut": pct, "trl": lambda v: f"TRL {num(v)}",
+               "offhire": lambda v: tr("opt.days", n=num(v)), "cargo": lambda v: pct(v, 1),
+               "availability": lambda v: f"{num(v)}/5", "safety": lambda v: f"{num(v)}/5", "nzf_exposure": eur_short}
 
-        def rng(k, fmt):
-            return tr("pri.range", lo=fmt(min(x[k])), hi=fmt(max(x[k])))
+        def rng(k):
+            return f"{tr(f'crit.{k}')}: " + tr("pri.range", lo=fmt[k](min(x[k])), hi=fmt[k](max(x[k])))
 
-        txt = {
-            "money": tr("crit.npv") + ": " + rng("npv", eur_short) + "; " + tr("crit.capex") + ": " + rng("capex", eur_short),
-            "climate": tr("crit.cut") + ": " + rng("cut", pct),
-            "technology": tr("crit.trl") + ": " + rng("trl", lambda v: f"TRL {num(v)}"),
-            "operations": "; ".join([tr("crit.offhire") + ": " + rng("offhire", lambda v: tr("opt.days", n=num(v))),
-                                     tr("crit.cargo") + ": " + rng("cargo", lambda v: pct(v, 1)),
-                                     tr("crit.availability") + ": " + rng("availability", lambda v: f"{num(v)}/5"),
-                                     tr("crit.safety") + ": " + rng("safety", lambda v: f"{num(v)}/5")]),
-            "regulation": tr("crit.nzf_exposure") + ": " + rng("nzf_exposure", eur_short),
-        }
-        self.levels["families"].hint.setText(tr("pri.hint.families") + "\n" + "\n".join(
-            f"• {tr(f'fam.{f}')}: {txt[f]}" for f in C.FAMILIES))
-        self.levels["money"].hint.setText(txt["money"])
-        self.levels["operations"].hint.setText(txt["operations"])
+        tips = {k: tr("pri.tip.range") + "<br>" + rng(k) for k in C.KEYS}
+        for f in C.FAMILIES:
+            tips[f] = tr("pri.tip.range") + "<br>" + "<br>".join(rng(c.key) for c in C.CRITERIA if c.family == f)
+        for lv in self.levels.values():
+            lv.set_tips(tips)
         self._data_weights(alts)
 
     def update_weights(self) -> None:
