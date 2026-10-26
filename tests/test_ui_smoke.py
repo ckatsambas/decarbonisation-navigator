@@ -1,4 +1,5 @@
 """Lobby → new project → choose ship → today's position → save → reopen."""
+import numpy as np
 import pytest
 
 pytest.importorskip("pytestqt")
@@ -228,3 +229,22 @@ def test_priorities_and_decision_with_smaa(win, qtbot):
     win.open_project(pid)
     pri = win.project_view.priorities_step
     assert pri.levels["families"].bwm.best.currentData() == "money"
+
+
+def test_priorities_reset_buttons(win):
+    win.new_project()
+    pv = win.project_view
+    pri = pv.priorities_step
+    fam = pri.levels["families"]
+    start = pri.global_weights().copy()
+    fam.bwm.best.setCurrentIndex(3)
+    fam.bwm.bo["money"].slider.setValue(8)
+    assert not np.allclose(pri.global_weights(), start)
+    fam.reset_btn.click()
+    assert fam.bwm.best.currentData() == "money" and fam.bwm.bo["climate"].value() == 2
+    assert pri.global_weights() == pytest.approx(start)
+    pri._method("ahp")
+    money = pri.levels["money"]
+    next(iter(money.ahp.pairs.values())).slider.setValue(-6)
+    money.reset_btn.click()
+    assert all(s.value() == 0 for s in money.ahp.pairs.values())

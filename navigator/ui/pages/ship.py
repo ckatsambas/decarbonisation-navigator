@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressDialog,
     QPushButton,
-    QSplitter,
     QTableView,
     QTableWidget,
     QTableWidgetItem,
@@ -155,9 +154,9 @@ class ShipDetail(QWidget):
         top.addWidget(self.use_btn, 0, Qt.AlignmentFlag.AlignTop)
         head.body.addLayout(top)
         self.info = QWidget()
-        info = QVBoxLayout(self.info)
+        info = QHBoxLayout(self.info)                # identity on the left, key figures on the right
         info.setContentsMargins(0, 0, 0, 0)
-        info.setSpacing(12)
+        info.setSpacing(36)
         head.body.addWidget(self.info)
         self.form = QFormLayout()
         self.form.setHorizontalSpacing(18)
@@ -169,7 +168,7 @@ class ShipDetail(QWidget):
             val.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self.form.addRow(lab, val)
             self.fields[key] = (lab, val)
-        info.addLayout(self.form)
+        info.addLayout(self.form, 3)
         kg = QGridLayout()
         kg.setHorizontalSpacing(24)
         self.k_co2 = Kpi("ship.kpi.co2", year="")
@@ -178,7 +177,7 @@ class ShipDetail(QWidget):
         for i, k in enumerate((self.k_co2, self.k_fuel, self.k_dist)):
             kg.addWidget(k, 0, i)
             kg.setColumnStretch(i, 1)
-        info.addLayout(kg)
+        info.addLayout(kg, 4)
 
         self.details = Fold("ship.details")
         more = QFormLayout()
@@ -211,7 +210,7 @@ class ShipDetail(QWidget):
         hh.setStretchLastSection(True)
         self.table.setMinimumHeight(250)
         self.details.body_layout.addWidget(self.table)
-        info.addWidget(self.details)
+        head.body.addWidget(self.details)          # history unfolds under the whole panel
         v.addWidget(head)
         v.addStretch(1)
         self.state.ship_changed.connect(lambda _: self._update_button())
@@ -489,7 +488,18 @@ class StepShip(Page):
         self.empty.body.addWidget(TrLabel("ship.no_data.body", "Muted", wrap=True))
         mv.addWidget(self.empty)
 
-        self.split = QSplitter(Qt.Orientation.Horizontal)
+        # selected ship across the full width on top, the results table at full width below
+        self.split = QWidget()
+        sl = QVBoxLayout(self.split)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.setSpacing(12)
+        right = QWidget()
+        rl = QVBoxLayout(right)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(12)
+        self.detail = ShipDetail(state)
+        rl.addWidget(self.detail)
+        sl.addWidget(right)
         self.model = ResultsModel()
         self.view = QTableView()
         self.view.setModel(self.model)
@@ -500,19 +510,9 @@ class StepShip(Page):
         self.view.setShowGrid(False)
         self.view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.view.horizontalHeader().setStretchLastSection(True)
-        self.view.setMinimumWidth(420)
+        self.view.setMinimumHeight(380)
         self.view.selectionModel().currentRowChanged.connect(self._row_changed)
-        self.split.addWidget(self.view)
-        right = QWidget()
-        rl = QVBoxLayout(right)
-        rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(12)
-        self.detail = ShipDetail(state)
-        rl.addWidget(self.detail)
-        self.split.addWidget(right)
-        self.split.setStretchFactor(0, 2)
-        self.split.setStretchFactor(1, 3)
-        self.split.setMinimumHeight(560)
+        sl.addWidget(self.view, 1)
         mv.addWidget(self.split, 1)
         self.lay.addWidget(self.mrv_pane, 1)
         self.std_pane = StandardPane(state)
