@@ -109,3 +109,16 @@ def consensus(rankings: dict[str, Ranking]) -> tuple[np.ndarray, np.ndarray, np.
             c = spearmanr(rs[i], rs[j]).statistic if rs.shape[1] > 2 else 1.0
             corr[i, j] = corr[j, i] = 1.0 if np.isnan(c) else c
     return mean, rankdata(mean, method="min").astype(int), corr
+
+
+def winner_map(x, maximise, weights_at, n: int = 60) -> np.ndarray:
+    """Winner (index of the best SAW alternative) on an n × n grid over two weights a, b ∈ [0, 1]
+    with a + b ≤ 1; `weights_at(a, b)` returns the full criteria weight vector. −1 outside."""
+    z = minmax(np.asarray(x, float), np.asarray(maximise, bool))
+    out = np.full((n, n), -1, int)
+    for i in range(n):
+        for j in range(n):
+            a, b = (i + 0.5) / n, (j + 0.5) / n
+            if a + b <= 1.0:
+                out[i, j] = int(np.argmax(z @ weights_at(a, b)))
+    return out

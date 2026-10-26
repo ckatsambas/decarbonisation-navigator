@@ -108,3 +108,20 @@ def test_smaa_outputs_are_probabilities(sim):
 def test_selftest_entry_point():
     from navigator.__main__ import selftest
     assert selftest() == 0
+
+
+def test_priority_map_helpers():
+    fam = {"money": 0.4, "climate": 0.3, "technology": 0.1, "operations": 0.1, "regulation": 0.1}
+    base = C.global_weights(fam, {"money": {"npv": 0.75, "capex": 0.25}})
+    w = C.split_weights(base, "money", "climate", 0.2, 0.5)
+    s = C.family_sums(w)
+    assert w.sum() == pytest.approx(1) and s["money"] == pytest.approx(0.2) and s["climate"] == pytest.approx(0.5)
+    k = list(C.KEYS)
+    assert w[k.index("npv")] / w[k.index("capex")] == pytest.approx(3)        # internal split kept
+    assert s["technology"] == pytest.approx(0.1) and s["regulation"] == pytest.approx(0.1)  # 0.3 left, equal shares
+    # the company's own point reproduces its weights
+    assert C.split_weights(base, "money", "climate", 0.4, 0.3) == pytest.approx(base)
+    # two options, each best on one criterion: the winner follows the larger weight
+    x = np.array([[1.0, 0.0], [0.0, 1.0]])
+    grid = RK.winner_map(x, np.array([True, True]), lambda a, b: np.array([a, b]), n=10)
+    assert grid[9, 0] == 0 and grid[0, 9] == 1 and grid[9, 9] == -1

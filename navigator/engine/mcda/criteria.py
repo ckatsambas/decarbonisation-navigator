@@ -113,3 +113,23 @@ def alternative(model: ShipModel, measures: Iterable[Measure], scenario: Scenari
 
 def matrix(alts: list[Alternative]) -> np.ndarray:
     return np.array([[a.values[k] for k in KEYS] for a in alts], dtype=float)
+
+
+def family_sums(w: np.ndarray) -> dict[str, float]:
+    return {f: float(sum(w[i] for i, c in enumerate(CRITERIA) if c.family == f)) for f in FAMILIES}
+
+
+def split_weights(base: np.ndarray, fx: str, fy: str, a: float, b: float) -> np.ndarray:
+    """Global weights with family fx at a and fy at b; the other families share 1 − a − b in the
+    proportions of `base`, and every family keeps its internal split."""
+    fam = family_sums(base)
+    rest = [f for f in FAMILIES if f not in (fx, fy)]
+    tot = sum(fam[f] for f in rest)
+    new = {fx: a, fy: b}
+    for f in rest:
+        new[f] = (1 - a - b) * (fam[f] / tot if tot > 0 else 1 / len(rest))
+    out = np.zeros(len(CRITERIA))
+    for i, c in enumerate(CRITERIA):
+        inner = base[i] / fam[c.family] if fam[c.family] > 0 else 1 / len(members(c.family))
+        out[i] = new[c.family] * inner
+    return out

@@ -22,9 +22,10 @@ reminds the author when an item becomes due. Tick items off with the commit that
       width; the table below at full width so every column shows.
 - [x] Step 4: a reset button (circular arrow) in every weighting section. The author is not fully happy with
       the sliders or the step-4 layout but has no alternative yet: no change for now.
-- [ ] Charts: take inspiration from Financial Architect and from the figures in the IMO study (polar bars by
-      ship type, small-multiple trend panels, scatter/box comparisons); comparative heatmaps over all possible
-      options with our result highlighted in red; a few mini animations. To be discussed.
+- [x] Charts, first batch (0011): rank heatmap and priority map in step 5 (company's weights in red), quiet
+      animations with an off switch in the top bar.
+- [ ] Charts, next batch (in this order): the ship against the fleet (scatter), MAC curve, method-agreement
+      heatmap.
 
 ## When Phase 4 (MCDA + SMAA) starts
 - [x] Vectorise the engine with NumPy for tens of thousands of runs (0010: `mcda/smaa.py`, CII not needed).
