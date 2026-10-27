@@ -168,6 +168,46 @@ QToolButton#Star:hover, QToolButton#Cross:hover {{ border-color: {p.border}; }}
 QToolButton#Star:checked {{ color: #D9A441; border-color: #D9A441; background: {p.panel_alt}; }}
 QToolButton#Cross:checked {{ color: {p.bad}; border-color: {p.bad}; background: {p.panel_alt}; }}
 #JudgeName {{ font-size: 9.5pt; }}
+/* ---------- first launch, accounts, tour (decision 0015) */
+#WelBrand {{ color: {p.muted}; font-size: 10pt; font-weight: 700; letter-spacing: 1.2px; }}
+#WelTitle {{ font-size: 30pt; font-weight: 700; color: {p.text}; }}
+#WelSub {{ font-size: 12.5pt; color: {p.muted}; }}
+QFrame#WelCard {{ background: {p.panel}; border: 1px solid {p.border}; border-radius: 18px; }}
+QPushButton#AuthTab {{ background: transparent; border: none; border-bottom: 2px solid {p.border}; color: {p.muted};
+    padding: 8px 14px; font-size: 10.5pt; }}
+QPushButton#AuthTab:checked {{ color: {p.accent}; border-bottom: 3px solid {p.accent}; font-weight: 600; }}
+QPushButton#AuthTab:hover {{ color: {p.text}; }}
+QLineEdit#Auth {{ font-size: 11pt; padding: 9px 12px; border-radius: 8px; }}
+#AuthLabel {{ color: {p.muted}; font-size: 9pt; font-weight: 600; }}
+#AuthError {{ color: {p.bad}; font-size: 9.5pt; }}
+#AuthText {{ color: {p.text}; font-size: 10.5pt; }}
+#AuthSmall, QCheckBox#AuthSmall {{ color: {p.muted}; font-size: 9pt; }}
+QPushButton#UserChip {{ background: {p.panel_alt}; border: 1px solid {p.border}; border-radius: 16px; padding: 6px 12px;
+    color: {p.text}; }}
+QPushButton#UserChip:hover {{ border-color: {p.accent}; }}
+#RecoveryCode {{ font-family: "Consolas", "SF Mono", "DejaVu Sans Mono", monospace; font-size: 22pt; font-weight: 700;
+    letter-spacing: 3px; color: {p.accent}; border: 2px dashed {p.accent}; border-radius: 12px; padding: 16px;
+    background: {p.shallow}; }}
+QPushButton#Tile {{ background: {p.panel_alt}; border: 2px solid {p.border}; border-radius: 14px; color: {p.text};
+    font-size: 10.5pt; font-weight: 600; padding-bottom: 10px; text-align: center; }}
+QPushButton#Tile:hover {{ border-color: {p.faint}; }}
+QPushButton#Tile:checked {{ border: 3px solid {p.accent}; background: {p.shallow}; }}
+QToolButton#Eye {{ background: transparent; border: 1px solid {p.border}; border-radius: 8px; min-width: 34px;
+    min-height: 34px; }}
+QToolButton#Eye:checked {{ border-color: {p.accent}; }}
+QToolButton#AccountChip {{ background: {p.accent}; color: {p.accent_text}; border: none; border-radius: 15px;
+    min-width: 30px; min-height: 30px; padding: 0 8px; font-weight: 700; font-size: 9pt; }}
+QToolButton#HelpChip {{ background: transparent; color: {p.muted}; border: 1px solid {p.border}; border-radius: 13px;
+    min-width: 26px; min-height: 26px; font-weight: 700; }}
+QToolButton#HelpChip:hover {{ color: {p.accent}; border-color: {p.accent}; }}
+QToolButton#HelpChip::menu-indicator {{ image: none; width: 0; }}
+QToolButton#AccountChip::menu-indicator {{ image: none; width: 0; }}
+QFrame#TourBubble {{ background: {p.panel}; border: 2px solid {p.accent}; border-radius: 14px; }}
+#TourCount {{ color: {p.accent}; font-size: 8.5pt; font-weight: 700; letter-spacing: 1px; }}
+#TourTitle {{ font-size: 13pt; font-weight: 700; color: {p.text}; }}
+#TourText {{ font-size: 10.5pt; color: {p.muted}; }}
+QTextBrowser#Terms {{ background: {p.panel}; border: 1px solid {p.border}; border-radius: 8px; padding: 14px;
+    font-size: 10.5pt; }}
 QToolButton#ViewChip {{ color: {p.faint}; background: {p.panel}; border: 1px solid {p.border}; border-radius: 4px;
     min-width: 22px; min-height: 20px; padding: 0 3px; font-size: 10pt; }}
 QToolButton#ViewChip:hover {{ color: {p.accent}; border-color: {p.accent}; }}

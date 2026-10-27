@@ -56,16 +56,23 @@ def selftest() -> int:
 def main() -> int:
     if "--selftest" in sys.argv:
         return selftest()
+    import os
+
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QApplication
 
     from . import APP_NAME, APP_ORG, i18n
+    from .data.accounts import AccountStore
+
+    QApplication.setOrganizationName(APP_ORG)
+    QApplication.setApplicationName(APP_NAME)
+    scale = str(QSettings(APP_ORG, APP_NAME).value("ui_scale", "100"))
+    if scale != "100" and "QT_SCALE_FACTOR" not in os.environ:      # interface size (decision 0015)
+        os.environ["QT_SCALE_FACTOR"] = f"{int(scale) / 100:.2f}"
     from .ui import theme
     from .ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
-    app.setOrganizationName(APP_ORG)
-    app.setApplicationName(APP_NAME)
     app.setFont(theme.ui_font(10))
     settings = QSettings()
     lang = settings.value("language", i18n.DEFAULT)
@@ -73,7 +80,12 @@ def main() -> int:
         i18n.set_language(lang)
     theme.set_current(theme.PALETTES.get(settings.value("theme", "light"), theme.DEFAULT))
     app.setStyleSheet(theme.stylesheet(theme.current()))
-    win = MainWindow()
+    accounts = AccountStore()
+    account = accounts.remembered()
+    if account is not None:
+        win = MainWindow(accounts=accounts, account=account)
+    else:
+        win = MainWindow(accounts=accounts, welcome="signin" if accounts.setup_done else "setup")
     win.show()
     return app.exec()
 

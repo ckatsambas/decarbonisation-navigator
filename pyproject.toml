@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decarbonisation-navigator"
-version = "0.1.6"
+version = "0.1.7"
 description = "Multi-criteria evaluation of ship decarbonisation investments under the IMO Net-Zero Framework, EU ETS and FuelEU Maritime"
 authors = [{ name = "Christos Katsampas" }]
 requires-python = ">=3.12"
@@ -29,7 +29,7 @@ decarbonisation-navigator = "navigator.__main__:main"
 include = ["navigator*"]
 
 [tool.setuptools.package-data]
-navigator = ["config/**/*.json", "i18n/*.json", "resources/*"]
+navigator = ["config/**/*.json", "i18n/*.json", "i18n/*.md", "resources/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
