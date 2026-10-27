@@ -1,7 +1,7 @@
 # PyInstaller build file: pyinstaller --noconfirm navigator.spec
 import sys
 
-datas = [("navigator/config", "navigator/config"), ("navigator/i18n/*.json", "navigator/i18n"),
+datas = [("navigator/config", "navigator/config"), ("navigator/i18n/*.json", "navigator/i18n"), ("navigator/i18n/*.md", "navigator/i18n"),
          ("navigator/resources", "navigator/resources")]
 excludes = ["tkinter", "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets", "PySide6.Qt3DCore"]
 

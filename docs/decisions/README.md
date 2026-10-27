@@ -20,3 +20,4 @@ and what follows from it. These notes are the raw material for thesis chapter 6
 | [0012](0012-animated-charts.md) | Animated QPainter charts in every step; fan of futures, radars, donut, exact priority map, turnable 3D; switchable views |
 | [0013](0013-clicked-judgements.md) | Step 4: click scales for BWM, comparison matrix for AHP, ranges as tooltips |
 | [0014](0014-phase5a-plans-and-report.md) | Phase 5a: timed plans, MILP Pareto front, two-stage adaptive plan, plans in MCDA/SMAA, PDF + Excel report |
+| [0015](0015-first-launch-accounts-tour.md) | First launch: local accounts (guest, terms), preferences with interface size, guided tour on the real app, Help menu |

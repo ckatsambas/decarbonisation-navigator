@@ -41,6 +41,12 @@ reminds the author when an item becomes due. Tick items off with the commit that
       decisions (aggregated weights).
 - [ ] After the IMO vote: the two-stage plan's NZF odds come from `markets.json`; set them to the outcome.
 
+## First launch (0015)
+- [x] Local accounts with guest and terms, preferences (language, theme, interface size), guided tour,
+      Help "?" menu with the tour. The author to review on Windows (also at 125 % and 150 % size).
+- [ ] The author (and supervisor) to review the wording of the terms (`i18n/terms_el.md`, `terms_en.md`);
+      raise `TERMS_VERSION` if it changes.
+
 ## When Phase 4 (MCDA + SMAA) starts
 - [x] Vectorise the engine with NumPy for tens of thousands of runs (0010: `mcda/smaa.py`, CII not needed).
 - [x] SMAA samples with common random numbers: EU share, every PERT input, prices, EUA path, NZF outcome,
