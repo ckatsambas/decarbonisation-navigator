@@ -1,6 +1,6 @@
 # Follow-ups and reminders
 
-Items that must be revisited later. Every session reads this file (linked from docs/WORKING-NOTES.md) and
+Items that must be revisited later. Every session reads this file (see `docs/WORKING-NOTES.md`) and
 reminds the author when an item becomes due. Tick items off with the commit that closes them.
 
 **Thesis deadline: April 2027.**

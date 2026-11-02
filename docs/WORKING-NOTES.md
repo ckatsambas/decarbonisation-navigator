@@ -13,6 +13,8 @@ The thesis is written in Greek; the software is bilingual (Greek default, Englis
 - Greek capitals are written without accents (use `ui.theme.upper`).
 - Code, identifiers, comments and commit messages are in English.
 - Record each significant design choice as a new note in `docs/decisions/`.
+- Commits are authored by Christos Katsampas <xristos.katsambas@gmail.com>, with no co-author or
+  tool trailers in the message.
 - Workflow: commit directly to `main`. Use a branch + PR only when a feature is an
   experiment or goes beyond what was asked, so the author can choose.
 - `navigator/data` (EU MRV) is pure Python like the engine. EMSA's raw files and
