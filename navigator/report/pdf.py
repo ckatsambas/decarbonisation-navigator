@@ -257,12 +257,24 @@ def _plans(doc: Doc) -> None:
     else:
         top = y - 0.42
     ad = pl.get("adaptive")
+    if ad and top - _adaptive_height(ad) < 0.06:      # a long timeline: the two-stage plan gets its own page
+        doc.save(fig)
+        fig = _fig(doc, doc.label("adaptive"))
+        top = 0.92
     if ad:
         fig.text(0.07, top, doc.label("adaptive").upper(), fontsize=8.5, fontweight="bold", color=MUTED)
         yy = text_block(fig, 0.07, top - 0.015, [ad["sentence"], ad["now"]], bullet="", width=100, size=8.5)
         table(fig, [0.07, 0.06, 0.86, max(yy - 0.075, 0.12)], ad["table"], size=6.4,
               col_widths=[0.14, 0.15, 0.1, 0.13, 0.48], max_chars=80)
     doc.save(fig)
+
+
+def _adaptive_height(ad: dict, size: float = 8.5, table_size: float = 6.4) -> float:
+    """Figure height the two-stage block needs: heading, wrapped text (as text_block) and the table."""
+    lines = sum(len(textwrap.wrap(s, 100) or [""]) for s in (ad["sentence"], ad["now"]))
+    text = 0.015 + lines * size / 72 / A4[1] * 1.45 + 2 * 0.006
+    rows = len(ad["table"].rows) + 2                     # + a two-line header
+    return text + 0.06 + rows * table_size / 72 / A4[1] * 1.9
 
 
 def _weights(doc: Doc) -> None:
