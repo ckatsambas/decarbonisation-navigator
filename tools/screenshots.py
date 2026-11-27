@@ -89,16 +89,12 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     w.grab().save(str(out / f"step4-choose-{lang}-{pal.name}.png"))       # decision 0016: the chooser first
     pri.chooser.cards["wap"][0].click()
     wp = pri.levels["families"].wap
-    wp.rows[3].up.click()                                                # operations above technology
-    for i, g in enumerate(("much", "little", "same", "clearly")):
-        wp.gaps[i].buttons[g].click()
-    pri.levels["money"].wap.gaps[0].buttons["little"].click()
+    for k, row in (("climate", 2), ("operations", 3), ("technology", 3), ("regulation", 5)):
+        wp.place(k, row)
+    pri.levels["money"].wap.place("capex", 1)
     op = pri.levels["operations"].wap
-    op.rows[3].up.click()
-    op.rows[2].up.click()
-    op.rows[1].up.click()                                                # safety first
-    for i, g in enumerate(("clearly", "same", "little")):
-        op.gaps[i].buttons[g].click()
+    for k, row in (("safety", 0), ("offhire", 2), ("cargo", 2), ("availability", 3)):
+        op.place(k, row)
     app.processEvents()
     w.grab().save(str(out / f"step4-{lang}-{pal.name}.png"))
     (out / "views").mkdir(exist_ok=True)

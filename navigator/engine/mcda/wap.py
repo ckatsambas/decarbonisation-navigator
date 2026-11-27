@@ -71,6 +71,21 @@ def classes_from_order(order: list[int], gaps: list[str | None]) -> list[list[in
     return out
 
 
+GAP_LEVELS = tuple(LEVELS)        # empty rows between two classes → word: 0 little, 1 clearly, 2 much, 3+ very
+
+
+def from_rows(rows: list[int]) -> tuple[list[list[int]], list[tuple[float, float]]]:
+    """Classes and z ranges from the row of each item on the ladder (row 0 = most important).
+
+    Items on the same row tie; the number of empty rows between two classes says how much more the
+    upper class matters (Simos' white cards, read as WAP ranges).
+    """
+    used = sorted(set(rows))
+    classes = [[i for i, r in enumerate(rows) if r == u] for u in used]
+    z = [LEVELS[GAP_LEVELS[min(b - a - 1, len(GAP_LEVELS) - 1)]] for a, b in zip(used, used[1:], strict=False)]
+    return classes, z
+
+
 def _system(n: int, classes: list[list[int]], z: list[tuple[float, float]]):
     """A_ub p ≤ b_ub and A_eq p = b_eq over the n weights."""
     if sorted(i for c in classes for i in c) != list(range(n)):

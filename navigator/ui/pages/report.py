@@ -35,10 +35,26 @@ def _choice(c, default: str) -> str:
     return next((v for v, b in c.buttons.items() if b.isChecked()), default)
 
 
+_COLLECTING = False
+
+
 def collect(pv, lang: str) -> ReportData:
-    """Everything the report needs, worded in `lang`."""
-    with using(lang):
-        return _collect(pv, lang)
+    """Everything the report needs, worded in `lang`. The sentences the steps show are part of the report,
+    so when the report's language differs from the interface's the steps are reworded for the moment
+    (not when this runs from inside that rewording: the report page calls collect itself)."""
+    global _COLLECTING
+    other = lang != language() and not _COLLECTING
+    if not other:
+        with using(lang):
+            return _collect(pv, lang)
+    _COLLECTING = True
+    try:
+        with using(lang):
+            pv.retranslate()
+            return _collect(pv, lang)
+    finally:
+        pv.retranslate()
+        _COLLECTING = False
 
 
 def _collect(pv, lang: str) -> ReportData:
@@ -49,7 +65,7 @@ def _collect(pv, lang: str) -> ReportData:
     labels = {k: tr(f"rep.{k}") for k in ("summary", "settings", "position", "position_chart", "measures", "plans",
                                           "adaptive", "weights", "ranking", "smaa", "assumptions", "sources", "page",
                                           "axis_cut", "axis_npv", "company", "entropy", "critic", "rank_short",
-                                          "legend_ets", "legend_fueleu", "legend_nzf")}
+                                          "legend_ets", "legend_fueleu", "legend_nzf", "continued", "smaa_top")}
     st = opt.settings()
     settings = [
         (tr("rep.set.view"), tr(f"rep.view.{pv.state.view}")),
@@ -58,7 +74,7 @@ def _collect(pv, lang: str) -> ReportData:
         (tr("pos.baseline"), tr(f"base.short.{_choice(pos.base, 'least_cost')}")),
         (tr("opt.start"), str(st["start"])), (tr("opt.life"), tr(f"opt.life.{st['life']}")),
         (tr("opt.prices"), tr(f"pos.price.{st['prices']}")), (tr("opt.rate"), pct(st["rate"])),
-        (tr("pri.method"), tr(f"pri.method.{pri.levels['families'].method}")),
+        (tr("pri.method"), pri.method_name()),
     ]
     summary: list[str] = []
     # ---- today's position
@@ -192,8 +208,7 @@ def _collect(pv, lang: str) -> ReportData:
         except (FileNotFoundError, KeyError, ValueError):
             continue
         for prm in ps.unverified():
-            v = prm.value
-            vs = (str(v) if not isinstance(v, dict) else ", ".join(f"{k}: {x}" for k, x in list(v.items())[:4]))[:40]
+            vs = value_text(prm.value, lang)
             rows_as.append([f"{name}.{prm.key}", vs, prm.note or ps.sources.get(prm.source, PR.Source("", prm.source)).title])
         for s in ps.sources.values():
             if s.title not in seen:
@@ -209,6 +224,19 @@ def _collect(pv, lang: str) -> ReportData:
     return ReportData(lang, tr("rep.title"), f"{ship}{' · ' + kind if kind else ''}", dt.date.today().isoformat(),
                       __version__, labels, [s for s in summary if s], settings, position, measures, plans, weights,
                       ranking, smaa, assumptions, sources)
+
+
+def value_text(v, lang: str) -> str:
+    """A configuration value as readable text: {el, en} names in the report's language, nested values flat."""
+    if isinstance(v, dict):
+        if v and set(v) <= {"el", "en"}:
+            return str(v.get(lang) or next(iter(v.values())))
+        return "; ".join(f"{k}: {value_text(x, lang)}" for k, x in v.items())
+    if isinstance(v, (list, tuple)):
+        return ", ".join(value_text(x, lang) for x in v)
+    if isinstance(v, float):
+        return f"{v:g}"
+    return str(v)
 
 
 class StepReport(Page):

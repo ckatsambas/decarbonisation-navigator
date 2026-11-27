@@ -189,6 +189,10 @@ def test_wap_asi_bounds_and_ties():
     with pytest.raises(ValueError):
         WAP.wap(2, [[0], [1]], [(2.0, 1.5)])
     assert WAP.classes_from_order([2, 0, 1, 3], [None, "much", None]) == [[2, 0], [1, 3]]
+    classes, z = WAP.from_rows([0, 2, 0, 6, 3])           # rows on the ladder; 2 and 3 adjacent
+    assert classes == [[0, 2], [1], [4], [3]]
+    assert z == [WAP.LEVELS["clearly"], WAP.LEVELS["little"], WAP.LEVELS["much"]]
+    assert WAP.from_rows([1, 1]) == ([[0, 1]], [])
 
 
 def test_wap_sampler_stays_inside_and_covers_the_polyhedron():

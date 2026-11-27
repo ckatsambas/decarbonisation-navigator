@@ -32,7 +32,7 @@ from ..charts import HBarChart, Switchable
 from ..judgement import ClickScale, PairMatrix, WeightBar, ratio
 from ..maps import FAMILY_COLORS, RED
 from ..radar import ProfileRadar
-from ..wap_input import MethodChooser, WapBlock
+from ..wap_input import LEVEL_OF, MethodChooser, WapBlock
 from ..widgets import Panel, ReadMore, TrLabel, label
 from .base import Page
 from .position import Choice
@@ -331,11 +331,9 @@ class StepPriorities(Page):
         self.options = options
         self.chosen: str | None = None                     # no method yet: only the chooser shows
         self.chooser_panel = Panel("pri.choose")
-        self.chooser_panel.body.addWidget(TrLabel("pri.choose.lede", "Muted", wrap=True))
         self.chooser = MethodChooser()
         self.chooser.picked.connect(self._method)
         self.chooser_panel.body.addWidget(self.chooser)
-        self.chooser_panel.body.addWidget(ReadMore("pri.method.more"))
         self.lay.addWidget(self.chooser_panel)
 
         self.top_bar = QWidget()
@@ -410,7 +408,7 @@ class StepPriorities(Page):
         self.chooser_panel.setVisible(not on)
         self.top_bar.setVisible(on)
         self.work.setVisible(on)
-        self.method_tag.setText(tr("pri.choose.easy" if self.chosen == "wap" else "pri.choose.advanced")
+        self.method_tag.setText(tr(f"pri.full.{self.chosen}") + " · " + tr(f"pri.level_of.{LEVEL_OF[self.chosen]}")
                                 if on else "")
 
     def update_hints(self) -> None:

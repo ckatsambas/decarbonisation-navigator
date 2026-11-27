@@ -7,6 +7,7 @@ pytest.importorskip("pytestqt")
 from navigator import i18n
 from navigator.data.projects import ProjectStore
 from navigator.engine.mcda import criteria as C
+from navigator.engine.mcda import wap as WAP
 from navigator.ui import theme
 from navigator.ui.main_window import MainWindow
 from navigator.ui.state import AppState
@@ -335,18 +336,20 @@ def test_wap_is_the_simple_way_and_feeds_smaa(win, qtbot, tmp_path):
     assert pri.is_wap() and not fam.wap.isHidden() and fam.bwm.isHidden()
     assert pri.global_weights() == pytest.approx(C.global_weights({f: 0.2 for f in C.FAMILIES}, {}))
     w = fam.wap
-    w.rows[3].up.click()                                        # operations above technology
-    assert w.order[2] == "operations"
-    w.gaps[0].buttons["much"].click()                           # money ≫ climate
-    w.gaps[1].buttons["little"].click()
-    w.gaps[3].buttons["clearly"].click()
+    w.place("climate", 2)                                       # one empty row: money clearly above climate
+    w.place("technology", 3)
+    w.place("operations", 3)                                    # same row: a tie
+    w.place("regulation", 5)
     r = pri.results["families"]
-    assert r.classes == ((0,), (1,), (3, 2), (4,))              # money > climate > {operations, technology} > regulation
+    assert r.classes == ((0,), (1,), (2, 3), (4,))              # money > climate > {technology, operations} > regulation
+    assert r.z == (WAP.LEVELS["clearly"], WAP.LEVELS["little"], WAP.LEVELS["clearly"])
     assert r.weights[0] > r.weights[1] > r.weights[3] > r.weights[4] and r.weights[3] == pytest.approx(r.weights[2])
     assert (r.lo <= r.weights + 1e-12).all() and (r.weights <= r.hi + 1e-12).all()
     assert "ASI" in fam.status.text()
-    w.gaps[0].range.set_z((2.4, 2.5), emit=True)                # narrower range → more stable
-    assert pri.results["families"].asi > r.asi
+    for k, row in (("regulation", 7), ("technology", 5), ("operations", 5), ("climate", 4)):
+        w.place(k, row)                                         # three empty rows under money: very much more
+    r2 = pri.results["families"]
+    assert r2.z[0] == WAP.LEVELS["very"] and r2.weights[0] / r2.weights[1] > r.weights[0] / r.weights[1]
     lo, hi = pri.global_ranges()
     assert (lo <= pri.global_weights() + 1e-12).all() and (pri.global_weights() <= hi + 1e-12).all()
     assert pri.cmp.columnCount() == 5
@@ -374,5 +377,5 @@ def test_wap_is_the_simple_way_and_feeds_smaa(win, qtbot, tmp_path):
     win.show_lobby()
     win.open_project(pid)
     pri = win.project_view.priorities_step
-    assert pri.is_wap() and pri.levels["families"].wap.order[2] == "operations"
-    assert pri.levels["families"].wap.gaps[0].range.z == pytest.approx((2.4, 2.5))
+    assert pri.is_wap() and pri.levels["families"].wap.rows == {"money": 0, "climate": 4, "technology": 5,
+                                                               "operations": 5, "regulation": 7}

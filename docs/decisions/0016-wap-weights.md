@@ -11,8 +11,9 @@ has known weaknesses (inconsistent judgement matrices, rank reversal). He asked 
 for advanced users, add WAP as the easy method, and show no charts until the user has picked a method.
 
 ## Decisions
-1. **Method chooser first** (`ui/wap_input.py: MethodChooser`). Step 4 opens with three cards: WAP marked
-   "simple · recommended", BWM and AHP "for advanced users". Until one is picked, nothing else of the
+1. **Method chooser first** (`ui/wap_input.py: MethodChooser`). Step 4 opens with three cards that show only
+   the short name in large letters (WAP, BWM, AHP), the full name under it and the level of use: beginner,
+   intermediate, advanced (author's request, 27 Nov 2026: no other explanation on the cards). Until one is picked, nothing else of the
    step is shown and the weights are equal. The method can be changed later from the bar at the top;
    each method keeps its own answers. Projects saved before this note open with the method they used.
 2. **WAP engine** (`engine/mcda/wap.py`, pure Python + SciPy HiGHS). The user (a) puts the items in order,
@@ -29,17 +30,20 @@ for advanced users, add WAP as the easy method, and show no charts until the use
    solutions is 0.979 for Table 3, where the paper prints 0.9923 from the RAVI software; the formula RAVI
    applies is not documented. Our ASI moves the same way (it rises after narrowing), and it is used only
    as a stability label, so the difference does not affect any weight. To be noted in chapter 6.
-4. **Words, then ranges**. Between two neighbours the user clicks a word: same (a tie), a little more
-   (×1.1–1.5), clearly more (×1.5–2), much more (×2–3), very much more (×3–5). The word sets a starting
-   range that a two-handle slider on a log scale (×1–×6) can narrow or widen; dragging updates the word.
-   This replaces RAVI's scroll bars with something one click answers. White cards are not offered: with
-   ranges they add nothing the user cannot say directly (the paper makes the same point).
-5. **What the user sees**: each item in order with its rank (=2 for ties), ▲ ▼ to move it, and a bar with
-   the range its weight can take (band) and the working weight (dot); under each section the ASI as
-   "stable / fairly stable / varies a lot" with a hint to narrow ranges (thresholds 0.95 and 0.90). The
-   comparison table and the report gain a "Range (WAP)" column; the PDF weight chart shows the ranges as
-   error bars. Same two levels as BWM and AHP (families; within money and operations). Global ranges are
-   the products of the level ranges, since the levels are independent.
+4. **One movement: a ladder** (revised 27 Nov 2026; the first version asked for an order with ▲ ▼ *and*
+   a row of words plus a range slider between each pair, which the author found needlessly complex).
+   The items are cards on a ladder of n + 3 rows and are only moved up or down (dragged, or with the
+   small arrows on each card). Higher = more important; the same row = a tie; the number of empty rows
+   between two classes gives the range: none ×1.1–1.5 (a little more), one ×1.5–2 (clearly), two ×2–3
+   (much), three or more ×3–5 (very much more) — the white cards of Simos read as WAP ranges
+   (`wap.from_rows`). The margin of the ladder names each step in words with its range, so the user
+   sees what the gaps mean without having to set them. Fine-tuning of the ranges is not offered.
+5. **What the user sees**: each card shows its weight and a thin band with the range the weight can take
+   and the working weight (dot); under each section the ASI as "stable / fairly stable / can move
+   noticeably" (thresholds 0.95 and 0.90). The comparison table and the report gain a "Range (WAP)"
+   column; the PDF weight chart shows the ranges as error bars. Same two levels as BWM and AHP (families;
+   within money and operations). Global ranges are the products of the level ranges, since the levels
+   are independent.
 6. **WAP feeds SMAA** (Siskos & Tsotsolas 2015, rule 4). With WAP the SMAA weights are drawn uniformly
    from the polyhedron at each level by hit-and-run (independent vectorised chains started at the
    barycentre, in the space of class weights, ties and z_min = z_max folded in as equalities) and
@@ -65,3 +69,17 @@ for advanced users, add WAP as the easy method, and show no charts until the use
 - Grigoroudis E., Siskos Y. (2010), Customer Satisfaction Evaluation, Springer (ASI).
 - Tervonen T., van Valkenhoef G., Baştürk N., Postmus D. (2013), Hit-And-Run enables efficient weight
   generation for simulation-based multiple criteria decision analysis, EJOR 224:552–559.
+
+## Report layout (27 November 2026)
+The author found texts and tables overlapping in exported PDFs. Checked with worst cases (29 options,
+3 plans added, the two-stage plan, 26 unverified assumptions, 70 sources) the pages showed squeezed
+ranking tables, an acceptability chart running off the page, sources below the page edge, column texts
+spilling into their neighbours and step sentences in the interface's language instead of the report's.
+The PDF now flows from the top of each page: texts wrap by measured width, cells are fitted to their
+column (long notes wrap to up to three lines), long tables continue on a "continued" page with their
+header, a block that does not fit moves to the next page, the acceptability chart shows the 12 options
+with the best expected rank (all of them stay in the Excel table), Greek capitals lose their accents,
+configuration values are written readably, and the step sentences are reworded in the report's
+language while it is collected. `navigator/report/layout_check.py` checks every page (off-page,
+overlaps, squeezed rows, overflowing cells); `tests/test_report_layout.py` runs it on a synthetic stress
+report and `tools/check_report.py` on saved report data.
