@@ -168,6 +168,21 @@ QToolButton#Star:hover, QToolButton#Cross:hover {{ border-color: {p.border}; }}
 QToolButton#Star:checked {{ color: #D9A441; border-color: #D9A441; background: {p.panel_alt}; }}
 QToolButton#Cross:checked {{ color: {p.bad}; border-color: {p.bad}; background: {p.panel_alt}; }}
 #JudgeName {{ font-size: 9.5pt; }}
+/* ---------- WAP and the method chooser (decision 0016) */
+QFrame#WapRow {{ background: {p.panel_alt}; border: 1px solid {p.border}; border-radius: 8px; }}
+#WapRank {{ color: {p.accent}; font-weight: 700; font-size: 10pt; }}
+QToolButton#WapMove {{ color: {p.muted}; background: transparent; border: 1px solid {p.border}; border-radius: 4px;
+    min-width: 22px; min-height: 20px; font-size: 8pt; }}
+QToolButton#WapMove:hover {{ color: {p.accent}; border-color: {p.accent}; }}
+QToolButton#WapMove:disabled {{ color: {p.grid}; border-color: {p.grid}; }}
+QPushButton#MethodCard, QPushButton#MethodCardMain {{ background: {p.panel}; border: 1px solid {p.border};
+    border-radius: 14px; text-align: left; padding: 0; }}
+QPushButton#MethodCardMain {{ border: 2px solid {p.accent}; background: {p.shallow}; }}
+QPushButton#MethodCard:hover, QPushButton#MethodCardMain:hover {{ border: 2px solid {p.accent}; }}
+#MethodTag {{ color: {p.faint}; font-size: 7.5pt; font-weight: 700; letter-spacing: 1.2px; }}
+#MethodTagMain {{ color: {p.accent}; font-size: 7.5pt; font-weight: 700; letter-spacing: 1.2px; }}
+#MethodTitle {{ color: {p.text}; font-size: 13pt; font-weight: 700; }}
+#MethodText {{ color: {p.muted}; font-size: 9.5pt; }}
 /* ---------- first launch, accounts, tour (decision 0015) */
 #WelBrand {{ color: {p.muted}; font-size: 10pt; font-weight: 700; letter-spacing: 1.2px; }}
 #WelTitle {{ font-size: 30pt; font-weight: 700; color: {p.text}; }}

@@ -291,6 +291,10 @@ def _weights(doc: Doc) -> None:
     h = 0.8 / len(series)
     for k, (lab, vals, col) in enumerate(series):
         ax.barh(idx + k * h, vals, height=h * 0.9, color=col, label=lab, alpha=1 if k == 0 else 0.55)
+        if k == 0 and w.get("lo") is not None:                  # WAP: the range each weight can take
+            v = np.asarray(vals, float)
+            err = np.vstack([v - np.asarray(w["lo"]), np.asarray(w["hi"]) - v]).clip(0)
+            ax.errorbar(v, idx, xerr=err, fmt="none", ecolor=MUTED, elinewidth=1, capsize=2.5)
     ax.set_yticks(idx + h * (len(series) - 1) / 2, names)
     ax.invert_yaxis()
     ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _p: _num(v * 100, 0, doc.d.lang) + "%"))

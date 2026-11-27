@@ -85,6 +85,25 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
             opt.set_ticked(opt.rows[i].m.key, True)
     pv.next_btn.click()
     pri = pv.priorities_step
+    app.processEvents()
+    w.grab().save(str(out / f"step4-choose-{lang}-{pal.name}.png"))       # decision 0016: the chooser first
+    pri.chooser.cards["wap"][0].click()
+    wp = pri.levels["families"].wap
+    wp.rows[3].up.click()                                                # operations above technology
+    for i, g in enumerate(("much", "little", "same", "clearly")):
+        wp.gaps[i].buttons[g].click()
+    pri.levels["money"].wap.gaps[0].buttons["little"].click()
+    op = pri.levels["operations"].wap
+    op.rows[3].up.click()
+    op.rows[2].up.click()
+    op.rows[1].up.click()                                                # safety first
+    for i, g in enumerate(("clearly", "same", "little")):
+        op.gaps[i].buttons[g].click()
+    app.processEvents()
+    w.grab().save(str(out / f"step4-{lang}-{pal.name}.png"))
+    (out / "views").mkdir(exist_ok=True)
+    pri.levels["families"].grab().save(str(out / "views" / f"step4-wap-{lang}-{pal.name}.png"))
+    pri._method("bwm")
     fam = pri.levels["families"].bwm
     fam.set_best("money")
     fam.set_worst("regulation")
@@ -93,8 +112,6 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     for k, v in {"money": 7, "climate": 5, "technology": 2, "operations": 3}.items():
         fam.ow[k].set_value(v, emit=True)
     app.processEvents()
-    w.grab().save(str(out / f"step4-{lang}-{pal.name}.png"))
-    (out / "views").mkdir(exist_ok=True)
     pri.levels["families"].grab().save(str(out / "views" / f"step4-bwm-{lang}-{pal.name}.png"))
     pri._method("ahp")
     money_pair = next(iter(pri.levels["families"].ahp.pairs.values()))
@@ -102,7 +119,7 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     app.processEvents()
     pri.levels["families"].grab().save(str(out / "views" / f"step4-ahp-{lang}-{pal.name}.png"))
     money_pair.set_value(0, emit=True)
-    pri._method("bwm")
+    pri._method("wap")
     app.processEvents()
     pv.next_btn.click()
     dec = pv.decision_step
@@ -110,7 +127,7 @@ for lang, pal in (("el", theme.CHART), ("en", theme.NIGHT)):
     from navigator.engine.mcda import smaa as S
     sim = S.Simulator(opt.model, {a.key: a.measures for a in dec.alts if a.key != MC.DO_NOTHING}, opt.scenario(),
                       opt.mcda_settings(), opt.rules)
-    dec.show_smaa(S.run(sim, True, pri.global_weights(), n=10000, kappa=100))
+    dec.show_smaa(S.run(sim, True, pri.global_weights(), n=10000, weight_samples=pri.weight_samples(10000, 1)))
     app.processEvents()
     dec.ensureWidgetVisible(dec.views, 0, 40)
     app.processEvents()

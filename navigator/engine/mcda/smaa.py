@@ -450,7 +450,9 @@ def sample_weights(center: np.ndarray | None, n: int, kappa: float, seed: int) -
 
 def run(sim: Simulator, include_do_nothing: bool = True, center_weights: np.ndarray | None = None,
         n: int = 10000, kappa: float = 100.0, seed: int = 20261204, nzf_prob: dict | None = None,
-        uncertain_inputs: bool = True) -> SmaaResult:
+        uncertain_inputs: bool = True, weight_samples: np.ndarray | None = None) -> SmaaResult:
+    """`weight_samples` (n, C), e.g. drawn from the WAP polyhedron, replaces the Dirichlet around
+    `center_weights`."""
     keys = list(sim.alts)
     d = Draws.sample(keys, n, sim.model, sim.rules, sim.prices, nzf_prob, seed, uncertain_inputs)
     A = len(keys) + (1 if include_do_nothing else 0)
@@ -487,7 +489,7 @@ def run(sim: Simulator, include_do_nothing: bool = True, center_weights: np.ndar
     z = (x - lo) / span
     z = np.where(C.MAXIMISE, z, 1 - z)
     z = np.where(hi > lo, z, 0.5)
-    w = sample_weights(center_weights, n, kappa, seed)
+    w = sample_weights(center_weights, n, kappa, seed) if weight_samples is None else np.asarray(weight_samples, float)
     u = np.einsum("kac,kc->ka", z, w)
     order = np.argsort(-u, axis=1, kind="stable")
     ranks = np.empty_like(order)

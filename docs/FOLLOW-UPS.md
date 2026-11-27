@@ -29,6 +29,10 @@ reminds the author when an item becomes due. Tick items off with the commit that
       where two fit, switched by small chips. The author to review on Windows.
 - [x] Step 4 inputs (0013): BWM by clicks on 1–9 scales with ★/✕, AHP as a clickable comparison matrix
       with inconsistency outlines, ranges as tooltips; step-5 donut removed. The author to review.
+- [x] Supervisor's feedback (20 Nov 2026): WAP added as the simple weighting method with a method
+      chooser first; BWM and AHP kept for advanced users (0016). The author to review on Windows.
+- [ ] Thesis in English (supervisor, 20 Nov 2026): translate the table of contents and the summary; write
+      chapter 6 on WAP (note the ASI difference from RAVI, 0016-3).
 - [ ] Charts, next batch (in this order): the ship against the fleet (scatter), MAC curve, method-agreement
       heatmap.
 

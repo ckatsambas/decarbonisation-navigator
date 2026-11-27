@@ -25,6 +25,7 @@ from ..plans import GROUP_COLOR, letter
 from ..widgets import Panel, ReadMore, TrLabel, amp, label
 from .base import Page
 from .position import Choice
+from .priorities import range_text
 
 CONFIG_FILES = [("regulation", n) for n in ("eu_ets_maritime", "fueleu", "imo_nzf", "fuels", "markets", "cii",
                                             "activity", "eedi")] + [("market", "prices"), ("model", "imo4_power")]
@@ -130,15 +131,25 @@ def _collect(pv, lang: str) -> ReportData:
         x = C.matrix(alts)
         ent, cri = W.entropy(x, C.MAXIMISE).weights, W.critic(x, C.MAXIMISE).weights
     fam_r = pri.results.get("families")
+    rng = pri.global_ranges()
+    head = [tr("col.criterion"), tr("pri.yours"), tr("pri.entropy"), tr("pri.critic")]
+    rows = [[names[i], float(w[i]), float(ent[i]) if ent is not None else "–",
+             float(cri[i]) if cri is not None else "–"] for i in range(len(names))]
+    kinds = ["text", "pct", "pct", "pct"]
+    if rng is not None:
+        head.insert(2, tr("pri.wap.range"))
+        for i, r in enumerate(rows):
+            r.insert(2, range_text(rng[0][i], rng[1][i]))
+        kinds.insert(2, "text")
+    status = pri.levels["families"].status.text() if fam_r and pri.chosen else ""
+    if rng is not None:
+        status = tr("rep.weights.wap", **{k[0]: num(pri.results[k].asi, 3) for k in ("families", "money", "operations")})
     weights = {"names": names, "company": list(w), "entropy": list(ent) if ent is not None else None,
                "critic": list(cri) if cri is not None else None,
-               "sentence": tr("rep.weights.sentence", method=tr(f"pri.method.{pri.levels['families'].method}")),
-               "status": pri.levels["families"].status.text() if fam_r else "",
-               "table": Table(tr("rep.weights"), [tr("col.criterion"), tr("pri.yours"), tr("pri.entropy"),
-                                                  tr("pri.critic")],
-                              [[names[i], float(w[i]), float(ent[i]) if ent is not None else "–",
-                                float(cri[i]) if cri is not None else "–"] for i in range(len(names))],
-                              ["text", "pct", "pct", "pct"])}
+               "lo": list(rng[0]) if rng is not None else None, "hi": list(rng[1]) if rng is not None else None,
+               "sentence": tr("rep.weights.sentence", method=pri.method_name()),
+               "status": status,
+               "table": Table(tr("rep.weights"), head, rows, kinds)}
     # ---- ranking and SMAA
     ranking = None
     smaa: dict = {}

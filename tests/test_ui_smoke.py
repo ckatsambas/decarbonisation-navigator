@@ -6,6 +6,7 @@ pytest.importorskip("pytestqt")
 
 from navigator import i18n
 from navigator.data.projects import ProjectStore
+from navigator.engine.mcda import criteria as C
 from navigator.ui import theme
 from navigator.ui.main_window import MainWindow
 from navigator.ui.state import AppState
@@ -208,6 +209,10 @@ def test_priorities_and_decision_with_smaa(win, qtbot):
     pv.next_btn.click()
     pri = pv.priorities_step
     assert len(opt.alternatives()) == 4                        # three measures + do nothing
+    assert pri.chosen is None and pri.work.isHidden() and not pri.chooser_panel.isHidden()
+    assert pri.global_weights() == pytest.approx(C.global_weights({f: 0.2 for f in C.FAMILIES}, {}))
+    pri.chooser.cards["bwm"][0].click()
+    assert pri.chosen == "bwm" and not pri.work.isHidden() and pri.chooser_panel.isHidden()
     fam = pri.levels["families"]
     fam.bwm.set_best("money")                                  # money most important
     fam.bwm.set_worst("regulation")                            # regulation least
@@ -236,6 +241,7 @@ def test_priorities_reset_buttons(win):
     pv = win.project_view
     pri = pv.priorities_step
     fam = pri.levels["families"]
+    pri._method("bwm")
     start = pri.global_weights().copy()
     fam.bwm.stars["operations"].click()
     fam.bwm.bo["money"].set_value(8, emit=True)
@@ -308,3 +314,65 @@ def test_investment_plans_join_the_ranking(win, qtbot, tmp_path):
     win.show_lobby()
     win.open_project(pid)
     assert key in win.project_view.options_step.plans.chosen
+
+
+def test_wap_is_the_simple_way_and_feeds_smaa(win, qtbot, tmp_path):
+    """Decision 0016: WAP answers give ranges and a barycentre, SMAA samples the polyhedron, all saved."""
+    win.new_project()
+    pv = win.project_view
+    pv.ship_step.set_mode("standard")
+    pv.ship_step.std_pane.pick_preset("kamsarmax")
+    pv.ship_step.std_pane.use_btn.click()
+    pv.next_btn.click()
+    pv.next_btn.click()
+    opt = pv.options_step
+    for key in ("hull_coating", "rotor_sails"):
+        opt.set_ticked(key, True)
+    pv.next_btn.click()
+    pri = pv.priorities_step
+    pri.chooser.cards["wap"][0].click()
+    fam = pri.levels["families"]
+    assert pri.is_wap() and not fam.wap.isHidden() and fam.bwm.isHidden()
+    assert pri.global_weights() == pytest.approx(C.global_weights({f: 0.2 for f in C.FAMILIES}, {}))
+    w = fam.wap
+    w.rows[3].up.click()                                        # operations above technology
+    assert w.order[2] == "operations"
+    w.gaps[0].buttons["much"].click()                           # money ≫ climate
+    w.gaps[1].buttons["little"].click()
+    w.gaps[3].buttons["clearly"].click()
+    r = pri.results["families"]
+    assert r.classes == ((0,), (1,), (3, 2), (4,))              # money > climate > {operations, technology} > regulation
+    assert r.weights[0] > r.weights[1] > r.weights[3] > r.weights[4] and r.weights[3] == pytest.approx(r.weights[2])
+    assert (r.lo <= r.weights + 1e-12).all() and (r.weights <= r.hi + 1e-12).all()
+    assert "ASI" in fam.status.text()
+    w.gaps[0].range.set_z((2.4, 2.5), emit=True)                # narrower range → more stable
+    assert pri.results["families"].asi > r.asi
+    lo, hi = pri.global_ranges()
+    assert (lo <= pri.global_weights() + 1e-12).all() and (pri.global_weights() <= hi + 1e-12).all()
+    assert pri.cmp.columnCount() == 5
+    s = pri.weight_samples(500, 1)
+    assert s.shape == (500, len(C.CRITERIA)) and s.sum(axis=1) == pytest.approx(np.ones(500))
+    assert (s >= lo - 1e-9).all() and (s <= hi + 1e-9).all()
+    pv.next_btn.click()
+    dec = pv.decision_step
+    assert dec.sure.isHidden() and not dec.sure_wap.isHidden()
+    dec.draws.set_value("2000")
+    dec.run_smaa()
+    qtbot.waitUntil(lambda: dec.smaa is not None, timeout=60_000)
+    assert (dec.smaa.weights >= lo - 1e-9).all()
+    from navigator.ui.pages.report import collect
+    data = collect(pv, "en")
+    assert data.weights["lo"] is not None and "WAP" in data.weights["sentence"]
+    assert data.weights["table"].header[2] == "Range (WAP)" and "ASI" in data.weights["status"]
+    pdf = pv.report_step.export("pdf", str(tmp_path / "wap.pdf"))
+    assert pdf.read_bytes()[:4] == b"%PDF"
+    pv.save_now()
+    pid = pv.project.id
+    win.show_lobby()
+    win.new_project()                                           # a fresh project starts at the chooser
+    assert win.project_view.priorities_step.chosen is None
+    win.show_lobby()
+    win.open_project(pid)
+    pri = win.project_view.priorities_step
+    assert pri.is_wap() and pri.levels["families"].wap.order[2] == "operations"
+    assert pri.levels["families"].wap.gaps[0].range.z == pytest.approx((2.4, 2.5))

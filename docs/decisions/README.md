@@ -21,3 +21,4 @@ and what follows from it. These notes are the raw material for thesis chapter 6
 | [0013](0013-clicked-judgements.md) | Step 4: click scales for BWM, comparison matrix for AHP, ranges as tooltips |
 | [0014](0014-phase5a-plans-and-report.md) | Phase 5a: timed plans, MILP Pareto front, two-stage adaptive plan, plans in MCDA/SMAA, PDF + Excel report |
 | [0015](0015-first-launch-accounts-tour.md) | First launch: local accounts (guest, terms), preferences with interface size, guided tour on the real app, Help menu |
+| [0016](0016-wap-weights.md) | Step 4: method chooser first; WAP (order + word ranges, LP ranges, barycentre, ASI) as the simple way, BWM/AHP for advanced users; SMAA samples the WAP polyhedron |

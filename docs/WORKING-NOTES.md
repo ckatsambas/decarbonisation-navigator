@@ -2,7 +2,8 @@
 
 Thesis software: multi-criteria evaluation of ship decarbonisation investments under the
 IMO Net-Zero Framework, EU ETS and FuelEU Maritime. Author: Christos Katsampas (UNIWA).
-The thesis is written in Greek; the software is bilingual (Greek default, English).
+The thesis is written in English (supervisor's request, 20 Nov 2026); the software is bilingual
+(Greek default, English).
 
 ## Conventions
 - Python 3.12+, PySide6. `navigator/engine` must never import from `navigator/ui` or Qt.

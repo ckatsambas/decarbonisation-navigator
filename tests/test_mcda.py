@@ -10,6 +10,7 @@ from navigator.engine.compliance import Rules, Scenario
 from navigator.engine.mcda import criteria as C
 from navigator.engine.mcda import ranking as RK
 from navigator.engine.mcda import smaa as S
+from navigator.engine.mcda import wap as WAP
 from navigator.engine.mcda import weights as W
 from navigator.engine.models import YearSeries
 
@@ -151,3 +152,54 @@ def test_smaa_keeps_paths_that_end_at_the_npv(sim):
     assert paths.shape == (S.FAN_PATHS, len(r.details["years"]))
     assert paths[:, -1] == pytest.approx(r.values["npv"][: S.FAN_PATHS, 0], rel=1e-4, abs=50)
     assert r.details["winner"].shape == (600,)
+
+
+# ------------------------------------------------------------------ WAP (decision 0016)
+PAPER_CLASSES = [[0], [1, 4], [2], [3]]                 # crit1 > {crit2, crit5} > crit3 > crit4
+PAPER_Z = [(1.1978, 1.4096), (1.8169, 1.9851), (2.5088, 2.7037)]
+
+
+def test_wap_reproduces_the_paper_example():
+    """Tsotsolas et al. (2019), Table 3: min, max, barycentre and μ of every weight."""
+    r = WAP.wap(5, PAPER_CLASSES, PAPER_Z)
+    assert r.lo == pytest.approx([0.3019, 0.2393, 0.1224, 0.0454, 0.2393], abs=1e-4)
+    assert r.hi == pytest.approx([0.3438, 0.2572, 0.1393, 0.0553, 0.2572], abs=1e-4)
+    assert r.weights == pytest.approx([0.3228, 0.2481, 0.1307, 0.0503, 0.2481], abs=1e-4)
+    assert r.mu.mean() == pytest.approx(0.02086, abs=1e-4)
+    assert r.z_total == pytest.approx((5.4599, 7.5655), abs=1e-3)      # the z of revised Simos
+    assert r.acceptable                                                 # nothing can contradict
+
+
+def test_wap_feedback_narrows_the_polyhedron():
+    """Table 10: z_max,1 from 1.41 to 1.22 shrinks the ranges and raises the ASI."""
+    wide = WAP.wap(5, PAPER_CLASSES, PAPER_Z)
+    narrow = WAP.wap(5, PAPER_CLASSES, [(1.1978, 1.22), *PAPER_Z[1:]])
+    assert narrow.lo == pytest.approx([0.3019, 0.2505, 0.1283, 0.0476, 0.2505], abs=3e-4)
+    assert narrow.hi == pytest.approx([0.3124, 0.2572, 0.1393, 0.0553, 0.2572], abs=5e-4)
+    assert narrow.asi > wide.asi and (narrow.mu <= wide.mu + 1e-12).all()
+
+
+def test_wap_asi_bounds_and_ties():
+    assert WAP.asi(np.tile([0.5, 0.3, 0.2], (6, 1))) == pytest.approx(1.0)
+    assert WAP.asi(np.eye(4)) == pytest.approx(0.0)
+    tie = WAP.wap(3, [[0, 1, 2]], [])
+    assert tie.weights == pytest.approx([1 / 3] * 3) and tie.asi == pytest.approx(1.0)
+    exact = WAP.wap(2, [[1], [0]], [(3.0, 3.0)])
+    assert exact.weights == pytest.approx([0.25, 0.75])
+    with pytest.raises(ValueError):
+        WAP.wap(2, [[0], [1]], [(2.0, 1.5)])
+    assert WAP.classes_from_order([2, 0, 1, 3], [None, "much", None]) == [[2, 0], [1, 3]]
+
+
+def test_wap_sampler_stays_inside_and_covers_the_polyhedron():
+    r = WAP.wap(5, PAPER_CLASSES, PAPER_Z)
+    s = WAP.sample(r, 4000, seed=3)
+    assert s.sum(axis=1) == pytest.approx(np.ones(len(s)))
+    assert (s >= r.lo - 1e-9).all() and (s <= r.hi + 1e-9).all()
+    assert s[:, 1] == pytest.approx(s[:, 4])
+    ratio = s[:, 0] / s[:, 1]
+    assert ratio.min() >= 1.1978 - 1e-9 and ratio.max() <= 1.4096 + 1e-9
+    assert ratio.min() < 1.22 and ratio.max() > 1.38                     # reaches both ends
+    assert s.mean(axis=0) == pytest.approx(r.weights, abs=3e-3)
+    fixed = WAP.sample(WAP.wap(3, [[0], [1], [2]], [(2.0, 2.0), (1.5, 2.5)]), 500, seed=1)
+    assert fixed[:, 0] / fixed[:, 1] == pytest.approx(np.full(500, 2.0))

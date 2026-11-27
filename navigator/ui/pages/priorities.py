@@ -1,6 +1,9 @@
 """Step 4 · Priorities: what matters most to the company, asked as simple comparisons.
 
-Best-Worst Method by default, AHP as an option (decision 0010-2), at two levels of the criteria tree:
+The company first picks how it wants to answer (decision 0016): WAP, an order of importance with words
+for the differences, is the simple and recommended way; the Best-Worst Method and AHP (decision 0010-2)
+stay for advanced users. Nothing else shows until a method is picked. Each method works at two levels
+of the criteria tree:
 the five families, then the criteria inside "money" and "operations". Each question shows how far
 apart the shortlisted options actually are on that family (swing weighting), because in an additive
 model a weight means "how much this difference matters", not importance in the abstract.
@@ -21,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...engine.mcda import criteria as C
+from ...engine.mcda import wap as WAP
 from ...engine.mcda import weights as W
 from ...i18n import eur_short, num, pct, tr
 from .. import theme
@@ -28,12 +32,17 @@ from ..charts import HBarChart, Switchable
 from ..judgement import ClickScale, PairMatrix, WeightBar, ratio
 from ..maps import FAMILY_COLORS, RED
 from ..radar import ProfileRadar
+from ..wap_input import MethodChooser, WapBlock
 from ..widgets import Panel, ReadMore, TrLabel, label
 from .base import Page
 from .position import Choice
 
 LEVELS = {"families": list(C.FAMILIES), "money": ["npv", "capex"],
           "operations": ["offhire", "cargo", "availability", "safety"]}
+
+
+def range_text(lo: float, hi: float) -> str:
+    return f"{num(lo * 100, 1)}–{pct(hi, 1)}"
 
 
 def item_name(key: str) -> str:
@@ -252,15 +261,14 @@ class Level(Panel):
         self.reset_btn.setText("↺")
         self.reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.reset_btn.clicked.connect(self.reset)
-        self.bwm, self.ahp = BwmBlock(items), AhpBlock(items)
-        self.body.addWidget(self.bwm)
-        self.body.addWidget(self.ahp)
+        self.wap, self.bwm, self.ahp = WapBlock(items, item_name), BwmBlock(items), AhpBlock(items)
+        for b in (self.wap, self.bwm, self.ahp):
+            self.body.addWidget(b)
+            b.changed.connect(self.changed)
         self.status = label("", "Muted", wrap=True)
         self.body.addWidget(self.status)
-        self.bwm.changed.connect(self.changed)
-        self.ahp.changed.connect(self.changed)
-        self.method = "bwm"
-        self.set_method("bwm")
+        self.method = "wap"
+        self.set_method("wap")
         self.retranslate_reset()
 
     def resizeEvent(self, e) -> None:  # noqa: N802 - Qt API
@@ -271,28 +279,42 @@ class Level(Panel):
 
     def reset(self) -> None:
         """Reset this section's answers (only the method shown)."""
-        (self.bwm if self.method == "bwm" else self.ahp).reset()
+        self.block().reset()
 
     def retranslate_reset(self) -> None:
         self.reset_btn.setToolTip(tr("pri.reset"))
 
+    def block(self):
+        return {"wap": self.wap, "bwm": self.bwm, "ahp": self.ahp}[self.method]
+
     def set_method(self, method: str) -> None:
         self.method = method
-        self.bwm.setVisible(method == "bwm")
-        self.ahp.setVisible(method == "ahp")
+        for k, b in (("wap", self.wap), ("bwm", self.bwm), ("ahp", self.ahp)):
+            b.setVisible(method == k)
 
     def set_tips(self, tips: dict[str, str]) -> None:
-        self.bwm.set_tips(tips)
-        self.ahp.set_tips(tips)
+        for b in (self.wap, self.bwm, self.ahp):
+            b.set_tips(tips)
 
     def result(self) -> W.WeightResult:
-        return self.bwm.result() if self.method == "bwm" else self.ahp.result()
+        return self.block().result()
 
     def show_status(self, r: W.WeightResult) -> None:
-        (self.bwm if self.method == "bwm" else self.ahp).set_weights(r.weights)
-        key = "pri.cons.ok" if r.acceptable else "pri.cons.bad"
-        self.status.setText(tr(key, cr=num(r.consistency, 2), limit=num(r.threshold, 2)))
-        self.status.setObjectName("Muted" if r.acceptable else "Warn")
+        if isinstance(r, WAP.WapResult):
+            self.wap.set_weights(r)
+            if len(r.classes) <= 1:
+                self.status.setText(tr("pri.wap.all_same"))
+                bad = False
+            else:
+                self.status.setText(tr(f"pri.wap.asi.{r.stability}", asi=num(r.asi, 3),
+                                       spread=pct(float(r.mu.max()), 1)))
+                bad = r.stability == "wide"
+            self.status.setObjectName("Warn" if bad else "Muted")
+        else:
+            self.block().set_weights(r.weights)
+            key = "pri.cons.ok" if r.acceptable else "pri.cons.bad"
+            self.status.setText(tr(key, cr=num(r.consistency, 2), limit=num(r.threshold, 2)))
+            self.status.setObjectName("Muted" if r.acceptable else "Warn")
         self.status.style().unpolish(self.status)
         self.status.style().polish(self.status)
 
@@ -307,14 +329,29 @@ class StepPriorities(Page):
     def __init__(self, state, options):
         super().__init__(state)
         self.options = options
+        self.chosen: str | None = None                     # no method yet: only the chooser shows
+        self.chooser_panel = Panel("pri.choose")
+        self.chooser_panel.body.addWidget(TrLabel("pri.choose.lede", "Muted", wrap=True))
+        self.chooser = MethodChooser()
+        self.chooser.picked.connect(self._method)
+        self.chooser_panel.body.addWidget(self.chooser)
+        self.chooser_panel.body.addWidget(ReadMore("pri.method.more"))
+        self.lay.addWidget(self.chooser_panel)
+
+        self.top_bar = QWidget()
+        tv = QVBoxLayout(self.top_bar)
+        tv.setContentsMargins(0, 0, 0, 0)
         top = QHBoxLayout()
         top.addWidget(TrLabel("pri.method", "SectionTitle"))
-        self.method = Choice([("bwm", "pri.method.bwm"), ("ahp", "pri.method.ahp")])
-        self.method.set_value("bwm")
+        self.method = Choice([("wap", "pri.method.wap"), ("bwm", "pri.method.bwm"), ("ahp", "pri.method.ahp")])
         top.addWidget(self.method)
+        top.addSpacing(10)
+        self.method_tag = label("", "Faint")
+        top.addWidget(self.method_tag)
         top.addStretch(1)
-        self.lay.addLayout(top)
-        self.lay.addWidget(ReadMore("pri.method.more"))
+        tv.addLayout(top)
+        tv.addWidget(ReadMore("pri.method.more"))
+        self.lay.addWidget(self.top_bar)
 
         row = QHBoxLayout()
         row.setSpacing(16)
@@ -345,22 +382,36 @@ class StepPriorities(Page):
         rp.body.addWidget(ReadMore("pri.compare.more"))
         rp.body.addStretch(1)
         row.addWidget(rp, 2)
-        self.lay.addLayout(row)
+        self.work = QWidget()
+        self.work.setLayout(row)
+        row.setContentsMargins(0, 0, 0, 0)
+        self.lay.addWidget(self.work)
         self.lay.addStretch(1)
 
         self.method.picked.connect(self._method)
         options.changed.connect(self.update_hints)
         self.weights = C.global_weights({f: 0.2 for f in C.FAMILIES}, {})
         self.results: dict[str, W.WeightResult] = {}
+        self._show_chosen()
         self.update_hints()
         self.update_weights()
 
     # ------------------------------------------------------------------
-    def _method(self, m: str) -> None:
-        self.method.set_value(m)
+    def _method(self, m: str | None) -> None:
+        self.chosen = m if m in ("wap", "bwm", "ahp") else None
+        self.method.set_value(self.chosen)
         for lv in self.levels.values():
-            lv.set_method(m)
+            lv.set_method(self.chosen or "wap")             # before a choice: WAP with all tied = equal
+        self._show_chosen()
         self.update_weights()
+
+    def _show_chosen(self) -> None:
+        on = self.chosen is not None
+        self.chooser_panel.setVisible(not on)
+        self.top_bar.setVisible(on)
+        self.work.setVisible(on)
+        self.method_tag.setText(tr("pri.choose.easy" if self.chosen == "wap" else "pri.choose.advanced")
+                                if on else "")
 
     def update_hints(self) -> None:
         """The spread of the shortlist on each item, shown as a tooltip on its name (swing weighting)."""
@@ -419,7 +470,12 @@ class StepPriorities(Page):
                             ring_fmt=lambda k: pct(k * top))
 
     def _data_weights(self, alts) -> None:
-        self.cmp.setHorizontalHeaderLabels([tr("col.criterion"), tr("pri.yours"), tr("pri.entropy"), tr("pri.critic")])
+        rng = self.global_ranges()
+        head = [tr("col.criterion"), tr("pri.yours"), tr("pri.entropy"), tr("pri.critic")]
+        if rng is not None:
+            head.insert(2, tr("pri.wap.range"))
+        self.cmp.setColumnCount(len(head))
+        self.cmp.setHorizontalHeaderLabels(head)
         ent = cri = None
         if len(alts) >= 2:
             x = C.matrix(alts)
@@ -427,6 +483,8 @@ class StepPriorities(Page):
         for i, c in enumerate(C.CRITERIA):
             vals = [tr(f"crit.{c.key}"), pct(self.weights[i], 1),
                     pct(ent[i], 1) if ent is not None else "–", pct(cri[i], 1) if cri is not None else "–"]
+            if rng is not None:
+                vals.insert(2, range_text(rng[0][i], rng[1][i]))
             for j, v in enumerate(vals):
                 it = QTableWidgetItem(v)
                 if j:
@@ -436,21 +494,65 @@ class StepPriorities(Page):
     def global_weights(self) -> np.ndarray:
         return self.weights
 
+    def is_wap(self) -> bool:
+        return self.chosen == "wap"
+
+    def global_ranges(self) -> tuple[np.ndarray, np.ndarray] | None:
+        """WAP only: the lowest and highest weight of each criterion under the company's answers
+        (the levels are independent, so the bounds multiply)."""
+        r = self.results
+        if not self.is_wap() or not all(isinstance(r.get(k), WAP.WapResult) for k in LEVELS):
+            return None
+        fam_lo, fam_hi = r["families"].lo, r["families"].hi
+        out_lo, out_hi = [], []
+        for c in C.CRITERIA:
+            f = C.FAMILIES.index(c.family)
+            if c.family in ("money", "operations"):
+                j = LEVELS[c.family].index(c.key)
+                out_lo.append(fam_lo[f] * r[c.family].lo[j])
+                out_hi.append(fam_hi[f] * r[c.family].hi[j])
+            else:
+                out_lo.append(fam_lo[f])
+                out_hi.append(fam_hi[f])
+        return np.array(out_lo), np.array(out_hi)
+
+    def weight_samples(self, n: int, seed: int) -> np.ndarray | None:
+        """WAP only: n weight vectors uniform on the company's polyhedron at every level, for SMAA."""
+        if not self.is_wap():
+            return None
+        r = self.results
+        fam = WAP.sample(r["families"], n, seed)
+        local = {f: WAP.sample(r[f], n, seed + 1 + i) for i, f in enumerate(("money", "operations"))}
+        return C.global_weights_many(fam, local)
+
+    def method_name(self) -> str:
+        return tr(f"pri.method.{self.chosen}") if self.chosen else tr("pri.method.none")
+
     def snapshot(self) -> dict:
-        return {"method": self.levels["families"].method,
+        return {"method": self.chosen,
+                "wap": {k: lv.wap.snapshot() for k, lv in self.levels.items()},
                 "bwm": {k: lv.bwm.snapshot() for k, lv in self.levels.items()},
                 "ahp": {k: lv.ahp.snapshot() for k, lv in self.levels.items()}}
 
     def restore(self, d: dict | None) -> None:
         d = d or {}
         for k, lv in self.levels.items():
-            lv.bwm.restore(d.get("bwm", {}).get(k, {}))
-            lv.ahp.restore(d.get("ahp", {}).get(k, {}))
-        self._method(d.get("method", "bwm"))
+            lv.wap.restore(d.get("wap", {}).get(k))
+            for block, key in ((lv.bwm, "bwm"), (lv.ahp, "ahp")):
+                saved = d.get(key, {}).get(k)
+                if saved:
+                    block.restore(saved)
+                else:
+                    block.reset()                           # a new project starts from scratch
+        # projects saved before decision 0016 always used a method (BWM unless they picked AHP)
+        self._method(d.get("method", "bwm" if d.get("bwm") else None))
 
     def on_language(self) -> None:
         self.method.retranslate()
+        self.chooser.retranslate()
+        self._show_chosen()
         for lv in self.levels.values():
+            lv.wap.retranslate()
             lv.bwm.retranslate()
             lv.ahp.retranslate()
             lv.retranslate_reset()

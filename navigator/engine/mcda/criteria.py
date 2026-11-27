@@ -58,6 +58,23 @@ def global_weights(family_w: dict[str, float], local_w: dict[str, dict[str, floa
     return w / w.sum()
 
 
+def global_weights_many(family_w: np.ndarray, local_w: dict[str, np.ndarray]) -> np.ndarray:
+    """Vectorised `global_weights`: family_w (K, families), local_w[family] (K, members) → (K, criteria)."""
+    fam = np.atleast_2d(np.asarray(family_w, float))
+    k = fam.shape[0]
+    cols = []
+    for c in CRITERIA:
+        members_f = [m.key for m in CRITERIA if m.family == c.family]
+        f = FAMILIES.index(c.family)
+        if len(members_f) == 1 or c.family not in local_w:
+            lw = np.full(k, 1.0 if len(members_f) == 1 else 1 / len(members_f))
+        else:
+            lw = np.asarray(local_w[c.family], float)[:, members_f.index(c.key)]
+        cols.append(fam[:, f] * lw)
+    w = np.stack(cols, axis=1)
+    return w / w.sum(axis=1, keepdims=True)
+
+
 @dataclass(frozen=True)
 class Alternative:
     key: str

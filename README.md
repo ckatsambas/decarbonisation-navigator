@@ -20,7 +20,7 @@ undergraduate thesis at the University of West Attica.
 | 1.5 | Guided interface: lobby, projects, six-step route, nautical-chart design | done |
 | 2 | Ship-type library, ship size estimate, probabilistic worldwide estimate, least-cost baseline | done |
 | 3 | Measure library (25), IMO-study power model, fuel price paths, NPV appraisal, Options step | done |
-| 4 | Weighting (BWM, AHP, entropy, CRITIC), ranking (SAW, TOPSIS, PROMETHEE II, VIKOR), SMAA-2 | done |
+| 4 | Weighting (WAP, BWM, AHP, entropy, CRITIC), ranking (SAW, TOPSIS, PROMETHEE II, VIKOR), SMAA-2 | done |
 | 5a | Investment plans: timed MILP Pareto front, two-stage adaptive plan, plans in MCDA/SMAA, PDF + Excel report | done |
 | 5b | Fleets, FuelEU pooling, group decisions | next (if time allows) |
 

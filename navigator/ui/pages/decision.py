@@ -56,14 +56,15 @@ class Worker(QObject):
     done = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, sim, weights, n, kappa, odds):
+    def __init__(self, sim, weights, n, kappa, odds, samples=None):
         super().__init__()
-        self.args = (sim, weights, n, kappa, odds)
+        self.args = (sim, weights, n, kappa, odds, samples)
 
     def run(self) -> None:
-        sim, w, n, kappa, odds = self.args
+        sim, w, n, kappa, odds, samples = self.args
         try:
-            res = S.run(sim, True, None if kappa == 0 else w, n=n, kappa=kappa or 1.0, nzf_prob=odds)
+            res = S.run(sim, True, None if kappa == 0 else w, n=n, kappa=kappa or 1.0, nzf_prob=odds,
+                        weight_samples=samples)
             self.done.emit(res)
         except Exception as e:  # noqa: BLE001 - shown to the user instead of crashing the app
             self.failed.emit(str(e))
@@ -142,8 +143,12 @@ class StepDecision(Page):
         self.draws.set_value("10000")
         for i, w in enumerate((self.odds, self.sure, self.draws)):
             grid.addWidget(w, 1, i, Qt.AlignmentFlag.AlignLeft)
+        self.sure_wap = TrLabel("dec.sure.wap", "Muted", wrap=True)    # WAP: the spread is the company's own
+        self.sure_wap.setMaximumWidth(320)
+        grid.addWidget(self.sure_wap, 1, 1, Qt.AlignmentFlag.AlignLeft)
         grid.addWidget(ReadMore("dec.odds.more"), 2, 0)
-        grid.addWidget(ReadMore("dec.sure.more"), 2, 1)
+        self.sure_more = ReadMore("dec.sure.more")
+        grid.addWidget(self.sure_more, 2, 1)
         grid.addWidget(ReadMore("dec.draws.more"), 2, 2)
         grid.setColumnStretch(3, 1)
         up.body.addLayout(grid)
@@ -204,11 +209,31 @@ class StepDecision(Page):
         self.axes.picked.connect(lambda v: (self.axes.set_value(v), self.draw_map()))
         self._view_changed(0)
         priorities.changed.connect(self.recompute)
+        priorities.changed.connect(self._sync_sure)
+        self._sync_sure()
         options.changed.connect(self.recompute)
         self.retranslate_buttons()
         self.recompute()
 
     # ------------------------------------------------------------------
+    def _sync_sure(self) -> None:
+        wap = self.priorities.is_wap()
+        self.sure.setVisible(not wap)
+        self.sure_wap.setVisible(wap)
+        self.sure_more.set_key("dec.sure.wap.more" if wap else "dec.sure.more")
+
+    def _wap_suffix(self) -> str:
+        return ".wap" if self.priorities.is_wap() else ""
+
+    def weight_cloud(self, n: int, seed: int) -> np.ndarray:
+        """Weights the robustness views and SMAA draw: the WAP polyhedron, or a Dirichlet around the
+        company's weights with the chosen certainty."""
+        w = self.priorities.weight_samples(n, seed)
+        if w is not None:
+            return w
+        kappa = SURE[self._value(self.sure, "mid")]
+        return S.sample_weights(None if kappa == 0 else self.priorities.global_weights(), n, kappa or 1.0, seed)
+
     def _value(self, choice: Choice, default: str) -> str:
         return next((v for v, b in choice.buttons.items() if b.isChecked()), default)
 
@@ -308,8 +333,7 @@ class StepDecision(Page):
         names = [self.name(k) for k in keys]
         colors = [self.colors[k] for k in keys]
         best = keys.index(self.best_key)
-        kappa = SURE[self._value(self.sure, "mid")]
-        w = S.sample_weights(None if kappa == 0 else base, 300, kappa or 1.0, 7)
+        w = self.weight_cloud(300, 7)
         z = RK.minmax(x, C.MAXIMISE)
         view = self.views.index()
         if view == 0:
@@ -319,7 +343,7 @@ class StepDecision(Page):
                                 [FAMILY_COLORS[c.family] for c in C.CRITERIA], base, w, wins,
                                 (tr("dec.radar.you"), tr("dec.radar.holds", best=names[best], share=pct(share)),
                                  tr("dec.radar.flips", share=pct(1 - share))))
-            self.map_note.setText(tr("dec.radar.note", best=names[best], share=pct(share)))
+            self.map_note.setText(tr("dec.radar.note" + self._wap_suffix(), best=names[best], share=pct(share)))
             return
         fx, fy = AXES[self._value(self.axes, "money-climate")]
         fam_idx = {f: [i for i, c in enumerate(C.CRITERIA) if c.family == f] for f in (fx, fy)}
@@ -341,7 +365,7 @@ class StepDecision(Page):
             self.surface.set_data(s0, sa, sb, best, colors, names, RK.winner_regions(x, C.MAXIMISE, at),
                                   (fam[fx], fam[fy]), axis,
                                   (tr("dec.radar.you"), tr("dec.3d.above", best=names[best]), tr("dec.3d.below")))
-        self.map_note.setText(tr("dec.map.note", name=names[here], share=pct(share)))
+        self.map_note.setText(tr("dec.map.note" + self._wap_suffix(), name=names[here], share=pct(share)))
 
     def _stale(self) -> None:
         self.status.setText(tr("dec.smaa.stale") if self.smaa is not None else tr("dec.smaa.ready"))
@@ -360,7 +384,8 @@ class StepDecision(Page):
         self.run_btn.setEnabled(False)
         self.busy.show()
         self._thread = QThread(self)
-        self._worker = Worker(sim, self.priorities.global_weights(), n, kappa, odds)
+        self._worker = Worker(sim, self.priorities.global_weights(), n, kappa, odds,
+                              self.priorities.weight_samples(n, 20261204))
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
         self._worker.done.connect(self._finished)
